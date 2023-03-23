@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "node-c-parser": "^1.0.11"
+  }
+}
