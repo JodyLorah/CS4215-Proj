@@ -6,15 +6,16 @@ parser.lexer.cppUnit.clearPreprocessors("../code.c", function(err, codeText){
     }
     else{
         var tokens = parser.lexer.lexUnit.tokenize(codeText);
-        // const fs = require('fs');
-        // fs.writeFile("/tmp/test", tokens, function(err) {
-        //     if(err) {
-        //         return console.log(err);
-        //     } else {
-        //         console.log("The file was saved!");
-        //     }
-        // });
-        console.log(tokens);
+        // convert JSON object to a string
+        const data = JSON.stringify(tokens, null, 4)
+        const fs = require('fs')
+
+        // write JSON string to a file
+        fs.writeFile('tokens.json', data, err => {
+            if (err) {
+                throw err
+            }
+        })
     }
 });
 
