@@ -1,9 +1,11 @@
 {
     "scripts": {
         "start": "tsc --build tsconfig.json && node ./build/evaluator/evaluator.js",
-        "all": "cd parser && node parser.js >> tokens.json && cd ../evaluator && node evaluator.js"
+        "all": "cd parser && node tokeniser.js >> tokens.json && cd ../evaluator && node evaluator.js",
+        "tokenise": "cd parser && node tokeniser.js >> tokens.json"
     },
     "dependencies": {
+        "antlr4": "^4.12.0",
         "node-c-parser": "^1.0.11",
         "sicp": "^1.1.4"
     },
@@ -11,5 +13,5 @@
         "@types/node": "^18.15.10",
         "typescript": "^5.0.2"
     },
-    "type": "commonjs"
+    "type": "module"
 }

@@ -1,0 +1,1 @@
+java -jar antlr-4.12.0-complete.jar -Dlanguage=TypeScript -visitor  ./C.g4 -o ./antlr_gen

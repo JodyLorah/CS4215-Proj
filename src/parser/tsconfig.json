@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+      "target": "es6",
+      "sourceMap": true,
+      "lib": [
+        "dom",
+        "es6",
+        "scripthost",
+        "es2015.collection"
+      ],
+      "esModuleInterop": true,
+      "moduleResolution": "node",
+      "allowJs": true,
+      "strict": false,
+      "rootDir": "antlr",
+      "noImplicitAny": false,
+      "resolveJsonModule": true
+    },
+    "include": ["antlr"],
+    "exclude": [
+      "node_modules"
+    ]
+}

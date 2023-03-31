@@ -1,21 +1,37 @@
-var parser = require("node-c-parser");
+import CParser, {CompilationUnitContext} from "./antlr/antlr_parser.js";
 
-parser.lexer.cppUnit.clearPreprocessors("../code.c", function(err, codeText){
-    if(err){
-        console.log(err);
-    }
-    else{
-        var tokens = parser.lexer.lexUnit.tokenize(codeText);
-        // convert JSON object to a string
-        const data = JSON.stringify(tokens, null, 4)
-        const fs = require('fs')
 
-        // write JSON string to a file
-        fs.writeFile('tokens.json', data, err => {
-            if (err) {
-                throw err
-            }
-        })
-    }
-});
 
+// import parsed code as tokens
+// var CodeTokens = require('../parser/tokens.json'); 
+
+// var parsedTokens;
+
+// const parify = (token) => {
+//     switch (token.tokenClass) {
+//         case "CONSTANT":
+//             console.log(typeof token.lexeme);
+//             return vector_to_list(['literal', token.lexeme])
+//         case "+":
+//             return pair("binary_operator_combination", pair("+", pair()))
+//     }
+// }
+
+// const parifyRow = (row) => {
+
+// }
+
+
+// const execute = () => {
+//     let currRow = [];
+
+//     for (i in CodeTokens) {
+//         if (CodeTokens[i].tokenClass === ';') { // eol, tokenise row
+//             parifyRow(currRow);
+//             continue;
+//         }
+//         currRow.push(CodeTokens[i]);
+//     }
+// }
+
+// execute();

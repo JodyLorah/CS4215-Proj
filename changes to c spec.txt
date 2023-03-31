@@ -1,0 +1,10 @@
+only allow 1 declarationSpecifiers (ie declarationSpecifiers : declarationSpecifier;)
+
+only allow 1 declaration at a time (int a, b = 2 not allowed) [changed initDeclaratorList to initDeclarator]
+
+no pointer implemented (prof's subscope)
+
+dont support void (only char int double)
+
+dont support type qualifiers (const not supported)
+

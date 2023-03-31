@@ -18,7 +18,5 @@
     "resolveJsonModule": true
   },
   "include": ["evaluator"],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }
