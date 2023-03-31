@@ -9,7 +9,7 @@
 import {CharStream, CommonTokenStream} from 'antlr4';
 import CVisitor from './antlr_gen/CVisitor.js';
 import CLexer from "./antlr_gen/CLexer.js"; // Had to add .js - This is a hack
-import CParser, {AdditiveExpressionContext, AssignmentExpressionContext, CompilationUnitContext, DeclarationContext, FunctionDefinitionContext, InitializerContext, TranslationUnitContext, TypeSpecifierContext} from "./antlr_gen/CParser.js";
+import CParser, {AdditiveExpressionContext, AssignmentExpressionContext, CompilationUnitContext, DeclarationContext, FunctionDefinitionContext, InitializerContext, MultiplicativeExpressionContext, TranslationUnitContext, TypeSpecifierContext} from "./antlr_gen/CParser.js";
 // import CompilationUnitVisitor from "../compiler/CompilationUnitVisitor";
 
 function isType(x: any): boolean {
@@ -28,15 +28,32 @@ function stringifyType(x: TypeSpecifierContext): string {
     }
 }
 
-function getSymbol(x: AdditiveExpressionContext): string {
-    if (isType(x.Plus())) {
-        return "+"
-    } else if (isType(x.Minus())) {
-        return "-"
+function getSymbol(x: AdditiveExpressionContext): string;
+function getSymbol(x: MultiplicativeExpressionContext): string;
+function getSymbol(x: AdditiveExpressionContext | MultiplicativeExpressionContext): string {
+    if (x instanceof AdditiveExpressionContext) {
+        if (isType(x.Plus())) {
+            return "+";
+        } else if (isType(x.Minus())) {
+            return "-";
+        } else {
+            throw new Error("type not allowed");
+        }
+    } else if (x instanceof MultiplicativeExpressionContext) {
+        if (isType(x.Star())) {
+            return "*";
+        } else if (isType(x.Div())) {
+            return "/";
+        } else if (isType(x.Mod())) {
+            return "%";
+        } else {
+            throw new Error("type not allowed");
+        }
     } else {
-        Error("type not allowed")
+        throw new Error("type not allowed");
     }
 }
+
 
 function printNestedArray(arr: any[]) {
     process.stdout.write("[");
@@ -79,7 +96,9 @@ class Visitor extends CVisitor<Array<object>> {
 
     // @ts-ignore
     visitCompilationUnit(ctx: CompilationUnitContext) {
-        return ctx.translationUnit().accept(this)
+        let rtn = ctx.translationUnit().accept(this)
+        printNestedArray(rtn)
+        return rtn
     }
 
     // @ts-ignore
@@ -106,21 +125,30 @@ class Visitor extends CVisitor<Array<object>> {
     visitDeclaration(ctx: DeclarationContext) {
         const type = ctx.typeSpecifier()
         const initDec = ctx.initDeclarator()
-        let name;
-        if (isType(initDec.directDeclarator().Identifier())) {
-            name = initDec.directDeclarator().Identifier().getText()
-        }
-        let obj = ["name", [name, [stringifyType(type), null]]]
-        // console.log(obj)
+        let name = this.visitDirectDeclarator(initDec.directDeclarator());
+        let dd = ["name", [name, [stringifyType(type), null]]]
 
         if (isType(initDec.Assign())) {
-            // WHEN EXPANDING: change the final declaration of rtn to the proper return calls
             let rhs = initDec.initializer().accept(this);
-            let rtn = ["variable_declaration", [obj, ["literal", [rhs, null]]]]
-            // console.log(rtn)
+            let rtn = ["variable_declaration", [dd, [rhs, null]]]
             return rtn
         }
-        return obj
+        return dd
+    }
+
+    // @ts-ignore
+    visitDirectDeclarator(ctx: DirectDeclaratorContext) {
+        if (isType(ctx.Identifier())) {
+            return ctx.Identifier().getText()
+        } else {
+            if (isType(ctx.parameterTypeList())) {
+                // TODO
+            } else if (isType(ctx.identifierList())) {
+                // TODO
+            } else {
+                return this.visitDirectDeclarator(ctx.directDeclarator())
+            }
+        }
     }
 
     // @ts-ignore
@@ -185,7 +213,23 @@ class Visitor extends CVisitor<Array<object>> {
     
     // @ts-ignore
     visitMultiplicativeExpression(ctx: MultiplicativeExpressionContext) {
-        return ctx.castExpression(0).accept(this);
+        let castExpr = ctx.castExpression().accept(this);
+
+        if (isType(ctx.multiplicativeExpression())) {
+            let multExpr = ctx.multiplicativeExpression()
+            let symbol = getSymbol(ctx)
+
+            let rtn = ["binary_operator_combination",
+                        [symbol, 
+                            [this.visitMultiplicativeExpression(multExpr), 
+                                [castExpr, null]
+                            ]
+                        ]
+                ]
+            return rtn
+        }         
+        
+        return castExpr;
     }
     
     // @ts-ignore
@@ -195,29 +239,49 @@ class Visitor extends CVisitor<Array<object>> {
     
     // @ts-ignore
     visitUnaryExpression(ctx: UnaryExpressionContext) {
-        return ctx.postfixExpression().accept(this);
+        if (isType(ctx.postfixExpression())) {
+            return ctx.postfixExpression().accept(this);
+        } 
+        if (isType(ctx.unaryOperator().Not())) {
+            return ["unary_operator_combination", 
+                        ["!", 
+                            [ctx.castExpression().accept(this), null]
+                        ]
+                   ]
+        }
+        return ["unary_operator_combination", 
+                    ["-unary", 
+                        [ctx.castExpression().accept(this), null]
+                    ]
+               ]
     }
     
     // @ts-ignore
     visitPostfixExpression(ctx: PostfixExpressionContext) {
-        return ctx.primaryExpression().accept(this);
+        if (isType(ctx.primaryExpression())) {
+            return ctx.primaryExpression().accept(this);
+        }
     }
     
     // @ts-ignore
     visitPrimaryExpression(ctx: PrimaryExpressionContext) {
         if (isType(ctx.Identifier())) {
-            // TODO
+            const type = ctx.typeSpecifier()
+            const name = ctx.Identifier().getText()
+            return ["name", [name, [stringifyType(type), null]]]
         } else if  (isType(ctx.Constant())) {
             let rtn = ["literal", [ctx.Constant().getText(), null]]
-            // printNestedArray(rtn)
-            // console.log()
-            // console.log(rtn)
             return rtn
-        } else if (isType(ctx.StringLiteral())) {
-            // TODO
-        } else {
-            // TODO
+        // } else if (isType(ctx.StringLiteral())) {
+        //     // TODO
+        } else if (isType(ctx.expression())) {
+            return this.visitExpression(ctx.expression())
         }
+    }
+
+    // @ts-ignore
+    visitExpression(ctx: ExpressionContext) {
+        return this.visitAssignmentExpression(ctx.assignmentExpression())
     }
 }
 
@@ -233,8 +297,12 @@ export function parseInput(input: string): CompilationUnitContext {
 
 const tree = parseInput(`
 
-int a = 2 + 3 - 4 - 5;
+char (c) = 6;
+
+
 
 `);
 const instructions = tree.accept(new Visitor());
 
+// int a = -3 * 4 - 5 + 6 / 7 - 8;
+// int b = !34;

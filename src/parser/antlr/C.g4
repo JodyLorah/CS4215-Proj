@@ -41,7 +41,7 @@
         : primaryExpression
         ('[' expression ']'
         | '(' argumentExpressionList? ')'
-        | ('++' | '--') /* TO REVIEW */
+        //| ('++' | '--') /* TO REVIEW */
         )*
         ;
 
@@ -51,19 +51,19 @@
 
     unaryExpression
         :
-        ('++' |  '--' |  'sizeof')* /* TO REVIEW */
+        //('++' |  '--' )* /* TO REVIEW */
         (postfixExpression
         |   unaryOperator castExpression
         )
         ;
 
     unaryOperator
-        :   '&' | '*' | '+' | '-' | '~' | '!'
+        :   '-' | '!'
         ;
 
     castExpression
         :   unaryExpression
-        |   DigitSequence // for /* TO REVIEW */
+        //|   DigitSequence // for /* TO REVIEW */
         ;
 
     multiplicativeExpression
@@ -157,7 +157,7 @@
     directDeclarator
         :   Identifier
         |   '(' directDeclarator ')'
-        |   directDeclarator '[' assignmentExpression? ']' /* TO REVIEW */
+        //|   directDeclarator '[' assignmentExpression? ']' /* TO REVIEW */
         |   directDeclarator '(' parameterTypeList ')'
         |   directDeclarator '(' identifierList? ')'
         ;
