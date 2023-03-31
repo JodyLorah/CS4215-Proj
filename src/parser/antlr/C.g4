@@ -263,7 +263,6 @@
     externalDeclaration
         :   functionDefinition
         |   declaration
-        |   ';' // stray ;
         ;
 
     functionDefinition

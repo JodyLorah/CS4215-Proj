@@ -103,21 +103,25 @@ class Visitor extends CVisitor<Array<object>> {
 
     // @ts-ignore
     visitTranslationUnit(ctx: TranslationUnitContext) {
-        let externalDecLst = ctx.externalDeclaration_list();
+        let externalDecLst = ctx.externalDeclaration_list()
+        if (externalDecLst.length == 1) {
+            return externalDecLst[0].accept(this)
+        }
 
-        // if (externalDecLst.length == 1) {
-
-        // }
+        let rtn = null;
+        externalDecLst = externalDecLst.reverse()
         for (var i in externalDecLst) {
-            if (isType(externalDecLst[i].functionDefinition())) {
-                console.log("is func def")
-                // return externalDecLst[i].functionDefinition().accept(this);
-            } else if (isType(externalDecLst[i].declaration())) {
-                // console.log("is declaration")
-                return externalDecLst[i].declaration().accept(this);
-            } else if (isType(externalDecLst[i].Semi())){
-                console.log("is ;")
-            }
+            rtn = [externalDecLst[i].accept(this), rtn]
+        }
+        return ["sequence", [rtn, null]]
+    }
+
+    // @ts-ignore
+    visitExternalDeclaration(ctx: ExternalDeclarationContext) {
+        if (isType(ctx.functionDefinition())) {
+            // TODO
+        } else if (isType(ctx.declaration())) {
+            return ctx.declaration().accept(this);
         }
     }
 
@@ -184,9 +188,6 @@ class Visitor extends CVisitor<Array<object>> {
     // @ts-ignore
     visitRelationalExpression(ctx: RelationalExpressionContext) {
         let rtn = ctx.additiveExpression(0).accept(this);
-        // printNestedArray(rtn)
-        // console.log()
-        // console.log()
         return rtn
     }
 
@@ -297,8 +298,9 @@ export function parseInput(input: string): CompilationUnitContext {
 
 const tree = parseInput(`
 
-char (c) = 6;
-
+int c = 6;
+int b = 2;
+int d = 3;
 
 
 `);

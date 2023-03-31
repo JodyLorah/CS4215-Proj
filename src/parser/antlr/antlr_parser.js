@@ -99,20 +99,23 @@ class Visitor extends CVisitor {
     // @ts-ignore
     visitTranslationUnit(ctx) {
         let externalDecLst = ctx.externalDeclaration_list();
-        // if (externalDecLst.length == 1) {
-        // }
+        if (externalDecLst.length == 1) {
+            return externalDecLst[0].accept(this);
+        }
+        let rtn = null;
+        externalDecLst = externalDecLst.reverse();
         for (var i in externalDecLst) {
-            if (isType(externalDecLst[i].functionDefinition())) {
-                console.log("is func def");
-                // return externalDecLst[i].functionDefinition().accept(this);
-            }
-            else if (isType(externalDecLst[i].declaration())) {
-                // console.log("is declaration")
-                return externalDecLst[i].declaration().accept(this);
-            }
-            else if (isType(externalDecLst[i].Semi())) {
-                console.log("is ;");
-            }
+            rtn = [externalDecLst[i].accept(this), rtn];
+        }
+        return ["sequence", [rtn, null]];
+    }
+    // @ts-ignore
+    visitExternalDeclaration(ctx) {
+        if (isType(ctx.functionDefinition())) {
+            // TODO
+        }
+        else if (isType(ctx.declaration())) {
+            return ctx.declaration().accept(this);
         }
     }
     // @ts-ignore
@@ -172,9 +175,6 @@ class Visitor extends CVisitor {
     // @ts-ignore
     visitRelationalExpression(ctx) {
         let rtn = ctx.additiveExpression(0).accept(this);
-        // printNestedArray(rtn)
-        // console.log()
-        // console.log()
         return rtn;
     }
     // @ts-ignore
@@ -271,8 +271,9 @@ export function parseInput(input) {
 }
 const tree = parseInput(`
 
-char (c) = 6;
-
+int c = 6;
+int b = 2;
+int d = 3;
 
 
 `);
