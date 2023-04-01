@@ -112,11 +112,21 @@ class Visitor extends CVisitor {
     // @ts-ignore
     visitExternalDeclaration(ctx) {
         if (isType(ctx.functionDefinition())) {
-            // TODO
+            return ctx.functionDefinition().accept(this);
         }
         else if (isType(ctx.declaration())) {
             return ctx.declaration().accept(this);
         }
+    }
+    // @ts-ignore
+    visitFunctionDefinition(ctx) {
+        const type = ctx.typeSpecifier();
+        const name = ["name", [ctx.directDeclarator().directDeclarator().getText(), [stringifyType(type), null]]];
+        let funcParams = null;
+        if (isType(ctx.directDeclarator().parameterList())) {
+            funcParams = ctx.directDeclarator().parameterList().accept(this);
+        }
+        return ["function_declaration", [name, [funcParams, [["sequence", [null, null]], null]]]];
     }
     // @ts-ignore
     visitDeclaration(ctx) {
@@ -137,8 +147,8 @@ class Visitor extends CVisitor {
             return ctx.Identifier().getText();
         }
         else {
-            if (isType(ctx.parameterTypeList())) {
-                // TODO
+            if (isType(ctx.parameterList())) {
+                return ctx.parameterList().accept(this);
             }
             else if (isType(ctx.identifierList())) {
                 // TODO
@@ -147,6 +157,22 @@ class Visitor extends CVisitor {
                 return this.visitDirectDeclarator(ctx.directDeclarator());
             }
         }
+    }
+    // @ts-ignore
+    visitParameterList(ctx) {
+        let lst = ctx.parameterDeclaration_list();
+        lst = lst.reverse();
+        let rtn = null;
+        for (var i in lst) {
+            rtn = [this.visitParameterDeclaration(lst[i]), rtn];
+        }
+        return rtn;
+    }
+    // @ts-ignore
+    visitParameterDeclaration(ctx) {
+        const type = ctx.typeSpecifier();
+        const name = this.visitDirectDeclarator(ctx.directDeclarator());
+        return ["name", [name, [stringifyType(type), null]]];
     }
     // @ts-ignore
     visitInitializer(ctx) {
@@ -270,10 +296,9 @@ export function parseInput(input) {
     return parser.compilationUnit();
 }
 const tree = parseInput(`
-
-int c = 6;
+int a = 1;
+int func(int x, int y) {}
 int b = 2;
-int d = 3;
 
 
 `);

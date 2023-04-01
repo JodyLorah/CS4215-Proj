@@ -24,7 +24,6 @@ import { DeclarationContext } from "./CParser";
 import { InitDeclaratorContext } from "./CParser";
 import { TypeSpecifierContext } from "./CParser";
 import { DirectDeclaratorContext } from "./CParser";
-import { ParameterTypeListContext } from "./CParser";
 import { ParameterListContext } from "./CParser";
 import { ParameterDeclarationContext } from "./CParser";
 import { IdentifierListContext } from "./CParser";
@@ -266,16 +265,6 @@ export default class CListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	exitDirectDeclarator?: (ctx: DirectDeclaratorContext) => void;
-	/**
-	 * Enter a parse tree produced by `CParser.parameterTypeList`.
-	 * @param ctx the parse tree
-	 */
-	enterParameterTypeList?: (ctx: ParameterTypeListContext) => void;
-	/**
-	 * Exit a parse tree produced by `CParser.parameterTypeList`.
-	 * @param ctx the parse tree
-	 */
-	exitParameterTypeList?: (ctx: ParameterTypeListContext) => void;
 	/**
 	 * Enter a parse tree produced by `CParser.parameterList`.
 	 * @param ctx the parse tree

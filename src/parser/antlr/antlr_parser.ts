@@ -9,7 +9,7 @@
 import {CharStream, CommonTokenStream} from 'antlr4';
 import CVisitor from './antlr_gen/CVisitor.js';
 import CLexer from "./antlr_gen/CLexer.js"; // Had to add .js - This is a hack
-import CParser, {AdditiveExpressionContext, AssignmentExpressionContext, CompilationUnitContext, DeclarationContext, FunctionDefinitionContext, InitializerContext, MultiplicativeExpressionContext, TranslationUnitContext, TypeSpecifierContext} from "./antlr_gen/CParser.js";
+import CParser, {AdditiveExpressionContext, AssignmentExpressionContext, CompilationUnitContext, DeclarationContext, DirectDeclaratorContext, FunctionDefinitionContext, InitializerContext, MultiplicativeExpressionContext, ParameterDeclarationContext, ParameterListContext, TranslationUnitContext, TypeSpecifierContext} from "./antlr_gen/CParser.js";
 // import CompilationUnitVisitor from "../compiler/CompilationUnitVisitor";
 
 function isType(x: any): boolean {
@@ -119,10 +119,23 @@ class Visitor extends CVisitor<Array<object>> {
     // @ts-ignore
     visitExternalDeclaration(ctx: ExternalDeclarationContext) {
         if (isType(ctx.functionDefinition())) {
-            // TODO
+            return ctx.functionDefinition().accept(this);
         } else if (isType(ctx.declaration())) {
             return ctx.declaration().accept(this);
         }
+    }
+
+    // @ts-ignore
+    visitFunctionDefinition(ctx: FunctionDefinitionContext) {
+        const type = ctx.typeSpecifier()
+        const name = ["name", [ctx.directDeclarator().directDeclarator().getText(), [stringifyType(type), null]]]
+        let funcParams = null
+
+        if (isType(ctx.directDeclarator().parameterList())) {
+            funcParams = ctx.directDeclarator().parameterList().accept(this)
+        }
+        return ["function_declaration", [name, [funcParams,[["sequence", [null, null]], null]]]                ]
+
     }
 
     // @ts-ignore
@@ -145,14 +158,33 @@ class Visitor extends CVisitor<Array<object>> {
         if (isType(ctx.Identifier())) {
             return ctx.Identifier().getText()
         } else {
-            if (isType(ctx.parameterTypeList())) {
-                // TODO
+            if (isType(ctx.parameterList())) {
+                return ctx.parameterList().accept(this)
             } else if (isType(ctx.identifierList())) {
                 // TODO
             } else {
                 return this.visitDirectDeclarator(ctx.directDeclarator())
             }
         }
+    }
+
+    // @ts-ignore
+    visitParameterList(ctx: ParameterListContext) {
+        let lst = ctx.parameterDeclaration_list()
+        lst = lst.reverse()
+
+        let rtn = null
+        for (var i in lst) {
+            rtn = [this.visitParameterDeclaration(lst[i]), rtn]
+        }
+        return rtn
+    }
+
+    // @ts-ignore
+    visitParameterDeclaration(ctx: ParameterDeclarationContext) {
+        const type = ctx.typeSpecifier()
+        const name = this.visitDirectDeclarator(ctx.directDeclarator())
+        return ["name", [name, [stringifyType(type), null]]]
     }
 
     // @ts-ignore
@@ -297,10 +329,9 @@ export function parseInput(input: string): CompilationUnitContext {
 }
 
 const tree = parseInput(`
-
-int c = 6;
+int a = 1;
+int func(int x, int y) {}
 int b = 2;
-int d = 3;
 
 
 `);

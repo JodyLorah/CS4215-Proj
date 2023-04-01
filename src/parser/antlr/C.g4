@@ -139,7 +139,7 @@
         ;
 
     declaration
-        :   typeSpecifier initDeclarator? ';'
+        :   typeSpecifier initDeclarator ';'
         ;
 
     initDeclarator
@@ -157,13 +157,9 @@
     directDeclarator
         :   Identifier
         |   '(' directDeclarator ')'
-        //|   directDeclarator '[' assignmentExpression? ']' /* TO REVIEW */
-        |   directDeclarator '(' parameterTypeList ')'
+        |   directDeclarator '[' assignmentExpression? ']' /*for arrays*/
+        |   directDeclarator '(' parameterList ')'
         |   directDeclarator '(' identifierList? ')'
-        ;
-
-    parameterTypeList
-        :   parameterList
         ;
 
     parameterList
@@ -186,7 +182,7 @@
     directAbstractDeclarator
         :   '(' directAbstractDeclarator ')'
         |   directAbstractDeclarator '[' assignmentExpression? ']'
-        |   directAbstractDeclarator '(' parameterTypeList? ')' 
+        |   directAbstractDeclarator '(' parameterList? ')' 
         ;
 
     typedefName
@@ -266,7 +262,7 @@
         ;
 
     functionDefinition
-        :   typeSpecifier? directDeclarator declarationList? compoundStatement
+        :   typeSpecifier directDeclarator /*declarationList?*/ compoundStatement
         ;
 
     declarationList
