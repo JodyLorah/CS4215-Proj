@@ -9,7 +9,7 @@
 import {CharStream, CommonTokenStream} from 'antlr4';
 import CVisitor from './antlr_gen/CVisitor.js';
 import CLexer from "./antlr_gen/CLexer.js"; // Had to add .js - This is a hack
-import CParser, {AdditiveExpressionContext, AssignmentExpressionContext, CompilationUnitContext, DeclarationContext, DirectDeclaratorContext, FunctionDefinitionContext, InitializerContext, MultiplicativeExpressionContext, ParameterDeclarationContext, ParameterListContext, TranslationUnitContext, TypeSpecifierContext} from "./antlr_gen/CParser.js";
+import CParser, {AdditiveExpressionContext, AssignmentExpressionContext, BlockItemContext, BlockItemListContext, CompilationUnitContext, DeclarationContext, DirectDeclaratorContext, FunctionDefinitionContext, InitializerContext, MultiplicativeExpressionContext, ParameterDeclarationContext, ParameterListContext, TranslationUnitContext, TypeSpecifierContext} from "./antlr_gen/CParser.js";
 // import CompilationUnitVisitor from "../compiler/CompilationUnitVisitor";
 
 function isType(x: any): boolean {
@@ -130,12 +130,41 @@ class Visitor extends CVisitor<Array<object>> {
         const type = ctx.typeSpecifier()
         const name = ["name", [ctx.directDeclarator().directDeclarator().getText(), [stringifyType(type), null]]]
         let funcParams = null
+        let funcBody = ["sequence", [null, null]]
 
         if (isType(ctx.directDeclarator().parameterList())) {
             funcParams = ctx.directDeclarator().parameterList().accept(this)
         }
-        return ["function_declaration", [name, [funcParams,[["sequence", [null, null]], null]]]                ]
 
+        if (isType(ctx.compoundStatement().blockItemList())) {
+            funcBody = ["block", [this.visitBlockItemList(ctx.compoundStatement().blockItemList()), null]]
+        }
+        return ["function_declaration", [name, [funcParams,[funcBody, null]]]]
+
+    }
+
+    // @ts-ignore
+    visitBlockItemList(ctx: BlockItemListContext) {
+        let lst = ctx.blockItem_list()
+        if (lst.length == 1) {
+            return lst[0].accept(this)
+        }
+
+        let rtn = null;
+        lst = lst.reverse()
+        for (var i in lst) {
+            rtn = [lst[i].accept(this), rtn]
+        }
+        return ["sequence", [rtn, null]]
+    }
+
+    // @ts-ignore
+    visitBlockItem(ctx: BlockItemContext) {
+        if (isType(ctx.declaration())) {
+            return ctx.declaration().accept(this)
+        } else {
+            // TODO: Statement type
+        }
     }
 
     // @ts-ignore
@@ -329,13 +358,23 @@ export function parseInput(input: string): CompilationUnitContext {
 }
 
 const tree = parseInput(`
-int a = 1;
-int func(int x, int y) {}
-int b = 2;
 
+int f(int b, int c){int d = 2;}
 
+int func(int x, int y) {
+    int e = 1;
+    int h = 2;
+}
 `);
 const instructions = tree.accept(new Visitor());
 
 // int a = -3 * 4 - 5 + 6 / 7 - 8;
 // int b = !34;
+
+// int a = 1;
+// int f(int b, int c){int d = 2;}
+// int func(int x, int y) {
+//     int e = 1;
+//     int h = 2;
+// }
+// int g = 2;

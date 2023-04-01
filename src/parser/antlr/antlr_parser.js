@@ -123,10 +123,36 @@ class Visitor extends CVisitor {
         const type = ctx.typeSpecifier();
         const name = ["name", [ctx.directDeclarator().directDeclarator().getText(), [stringifyType(type), null]]];
         let funcParams = null;
+        let funcBody = ["sequence", [null, null]];
         if (isType(ctx.directDeclarator().parameterList())) {
             funcParams = ctx.directDeclarator().parameterList().accept(this);
         }
-        return ["function_declaration", [name, [funcParams, [["sequence", [null, null]], null]]]];
+        if (isType(ctx.compoundStatement().blockItemList())) {
+            funcBody = ["block", [this.visitBlockItemList(ctx.compoundStatement().blockItemList()), null]];
+        }
+        return ["function_declaration", [name, [funcParams, [funcBody, null]]]];
+    }
+    // @ts-ignore
+    visitBlockItemList(ctx) {
+        let lst = ctx.blockItem_list();
+        if (lst.length == 1) {
+            return lst[0].accept(this);
+        }
+        let rtn = null;
+        lst = lst.reverse();
+        for (var i in lst) {
+            rtn = [lst[i].accept(this), rtn];
+        }
+        return ["sequence", [rtn, null]];
+    }
+    // @ts-ignore
+    visitBlockItem(ctx) {
+        if (isType(ctx.declaration())) {
+            return ctx.declaration().accept(this);
+        }
+        else {
+            // TODO: Statement type
+        }
     }
     // @ts-ignore
     visitDeclaration(ctx) {
@@ -296,13 +322,22 @@ export function parseInput(input) {
     return parser.compilationUnit();
 }
 const tree = parseInput(`
-int a = 1;
-int func(int x, int y) {}
-int b = 2;
 
+int f(int b, int c){int d = 2;}
 
+int func(int x, int y) {
+    int e = 1;
+    int h = 2;
+}
 `);
 const instructions = tree.accept(new Visitor());
 // int a = -3 * 4 - 5 + 6 / 7 - 8;
 // int b = !34;
+// int a = 1;
+// int f(int b, int c){int d = 2;}
+// int func(int x, int y) {
+//     int e = 1;
+//     int h = 2;
+// }
+// int g = 2;
 //# sourceMappingURL=antlr_parser.js.map
