@@ -4,8 +4,8 @@ Object.entries(require('sicp'))
       .forEach(([name, exported]) => global[name] = exported);
 
 // import parsed code as tokens
-var CodeTokens = require('../parser/tokens.json'); 
-
+var CodeTokens = require('../parser/antlr/antlr_tokens.json'); 
+// import Parse from '../parser/antlr/antlr_parser.js';
 /* ****************************************
  * Explicit-control evaluator for C
  * ****************************************/
@@ -13,6 +13,21 @@ var CodeTokens = require('../parser/tokens.json');
 /* *************
  * parse to JSON
  * *************/
+
+function printNestedArray(arr) {
+    process.stdout.write("[");
+    arr.forEach((el, index) => {
+      if (Array.isArray(el)) {
+        printNestedArray(el);
+      } else {
+        process.stdout.write(JSON.stringify(el));
+      }
+      if (index !== arr.length - 1) {
+        process.stdout.write(", ");
+      }
+    });
+    process.stdout.write("]");
+  }
 
 const list_to_array = xs =>
     is_null(xs)
@@ -206,13 +221,6 @@ const is_builtin = x =>
     typeof x === "object" && 
     x.tag == 'builtin'
 
-const is_type = x =>
-    x !== null &&
-    (x.tokenClass === 'INT' || 
-     x.tokenClass === 'FLOAT' ||
-     x.tokenClass === 'DOUBLE' ||
-     x.tokenClass === 'CHAR')
-
 // catching closure and builtins to get short displays
 const value_to_string = x => 
      is_closure(x)
@@ -366,35 +374,30 @@ global_frame.math_PI      = math_PI
 global_frame.math_SQRT1_2 = math_SQRT1_2
 global_frame.math_SQRT2   = math_SQRT2
 
+// An environment is null or a pair whose head is a frame 
+// and whose tail is an environment.
+const empty_environment = null
+const global_environment = pair(global_frame, empty_environment)
+
 const lookup = (x, e) => {
     if (is_null(e)) 
         error(x, 'unbound name:')
-    if (e[x] === undefined) {
-        var next = peek(A)
-        if (!is_type(next)) {
-            error(x, 'unassigned name:')
-        }
-        var obj = {name: x, type: next.tokenClass, val: undefined}
-        A.pop()
-        e[x] = obj
+    if (head(e).hasOwnProperty(x)) {
+        const v = head(e)[x]
+        if (is_unassigned(v))
+            error(cmd.sym, 'unassigned name:')
+        return v
     }
-    return e[x]
+    return lookup(x, tail(e))
 }
-
-const is_compatible = (x, v) => {
-    return ((x.type === 'INT' && v.tag === 'constant') ||
-            (x.type === 'FLOAT' && v.tag === 'constant') ||
-            (x.type === 'CHAR' && v.tag === 'STRING_LITERAL'))
-}
-    
 
 const assign = (x, v, e) => {
     if (is_null(e))
         error(x, 'unbound name:')
-    if (is_compatible(x, v)) {
-        e[x.name].val = v.val
+    if (head(e).hasOwnProperty(x)) {
+        head(e)[x] = v
     } else {
-        error('type mismatch')
+        assign(x, v, tail(e))
     }
 }
 
@@ -469,23 +472,6 @@ const push = (array, ...items) => {
 // without changing the array
 const peek = array =>
     array.slice(-1)[0]
-
-
-// evaluates stash at the end of stmt
-const eval_stash = () => {
-    S.reverse()
-    console.log(S)
-
-    while (S.length > 0) {
-        const cmd = S.pop()
-        if (microcode.hasOwnProperty(cmd.tag)) {
-            microcode[cmd.tag](cmd)
-        } else {
-            error("", "unknown command: " + 
-                      command_to_string(cmd))
-        }
-    }
-}
     
 /* **************************
  * interpreter configurations
@@ -523,7 +509,9 @@ let S
 
 // environment E
 
-// Execution initializes environment E as an empty hashmap.
+// See *environments* above. Execution initializes 
+// environment E as the global environment.
+
 let E
 
 /* *********************
@@ -542,231 +530,200 @@ const microcode = {
 //
 // expressions
 //
-CONSTANT:
-        cmd =>
-        push(S, {tag: 'constant', val: cmd.lexeme}),
-IDENTIFIER:
-        cmd => 
-        push(S, lookup(cmd.lexeme, E)),
-
-
-"=": 
-        cmd =>
-        push(S, {tag: 'assmt_i', var: S.pop()}),
-assmt_i:
-        cmd =>
-        assign(cmd.var, S.pop(), E),
-
-";":
-        cmd =>
-        eval_stash(),
-//
-// statements
-//
-INT:
-        cmd => {
-            var curr = cmd
-            var next = A.pop()
-            push(A, curr)
-            push(A, next)
-        }
-}
-
-
-// lit:
-//     cmd =>
-//     push(S, cmd.val),
-// nam:
-//     cmd => 
-//     push(S, lookup(cmd.sym, E)),
-// unop:
-//     cmd =>
-//     push(A, {tag: 'unop_i', sym: cmd.sym}, cmd.frst),
-// binop:
-//     cmd =>
-//     push(A, {tag: 'binop_i', sym: cmd.sym}, cmd.scnd, cmd.frst),
-// log:
-//     cmd => 
-//     push(A, cmd.sym == '&&' 
-//             ? {tag: 'cond_expr', 
-//                pred: cmd.frst, 
-//                cons: {tag: 'lit', val: true},
-//                alt: cmd.scnd}
-//             : {tag: 'cond_expr',  
-//                pred: cmd.frst,
-//                cons: cmd.scnd, 
-//                alt: {tag: 'lit', val: false}}),
-// cond_expr: 
-//     cmd => 
-//     push(A, {tag: 'branch_i', cons: cmd.cons, alt: cmd.alt}, cmd.pred),
-// app: 
-//     cmd =>
-//     push(A, {tag: 'app_i', arity: cmd.args.length}, 
-//             ...cmd.args, // already in reverse order, see ast_to_json
-//             cmd.fun),
-// assmt: 
-//     cmd =>
-//     push(A, {tag: 'assmt_i', sym: cmd.sym}, cmd.expr),
-// lam:
-//     cmd =>
-//     push(S, {tag: 'closure', prms: cmd.prms, body: cmd.body, env: E}),
-// arr_lit:
-//     cmd =>
-//     push(A, {tag: 'arr_lit_i', arity: cmd.elems.length}, 
-//             ...cmd.elems), // already in reverse order, see ast_to_json
-// arr_acc: 
-//     cmd =>
-//     push(A, {tag: 'arr_acc_i'}, cmd.ind, cmd.arr),
-// arr_assmt: 
-//     cmd => 
-//     push(A, {'tag': 'arr_assmt_i'}, cmd.expr, cmd.ind, cmd.arr),
+lit:
+    cmd =>
+    push(S, cmd.val),
+nam:
+    cmd => 
+    push(S, lookup(cmd.sym, E)),
+unop:
+    cmd =>
+    push(A, {tag: 'unop_i', sym: cmd.sym}, cmd.frst),
+binop:
+    cmd =>
+    push(A, {tag: 'binop_i', sym: cmd.sym}, cmd.scnd, cmd.frst),
+log:
+    cmd => 
+    push(A, cmd.sym == '&&' 
+            ? {tag: 'cond_expr', 
+               pred: cmd.frst, 
+               cons: {tag: 'lit', val: true},
+               alt: cmd.scnd}
+            : {tag: 'cond_expr',  
+               pred: cmd.frst,
+               cons: cmd.scnd, 
+               alt: {tag: 'lit', val: false}}),
+cond_expr: 
+    cmd => 
+    push(A, {tag: 'branch_i', cons: cmd.cons, alt: cmd.alt}, cmd.pred),
+app: 
+    cmd =>
+    push(A, {tag: 'app_i', arity: cmd.args.length}, 
+            ...cmd.args, // already in reverse order, see ast_to_json
+            cmd.fun),
+assmt: 
+    cmd =>
+    push(A, {tag: 'assmt_i', sym: cmd.sym}, cmd.expr),
+lam:
+    cmd =>
+    push(S, {tag: 'closure', prms: cmd.prms, body: cmd.body, env: E}),
+arr_acc: 
+    cmd =>
+    push(A, {tag: 'arr_acc_i'}, cmd.ind, cmd.arr),
+arr_assmt: 
+    cmd => 
+    push(A, {'tag': 'arr_assmt_i'}, cmd.expr, cmd.ind, cmd.arr),
+arr_len: 
+    cmd => 
+    push(A, {tag: 'arr_len_i'}, cmd.expr),
+arr_lit:
+    cmd =>
+    push(S, cmd.elems),
 
 //
 // statements
 //
-// seq: 
-//     cmd => push(A, ...handle_sequence(cmd.stmts)),
-// cond_stmt:
-//     cmd =>
-//     push(A, {tag: 'branch_i', cons: cmd.cons, alt: cmd.alt},
-//             cmd.pred),
-// blk:
-//     cmd => {
-//         const locals = scan(cmd.body)
-//         const unassigneds = locals.map(_ => unassigned)
-//         if (! (A.length === 0))
-//             push(A, {tag: 'env_i', env: E})
-//         push(A, cmd.body)
-//         E = extend(locals, unassigneds, E)
-//     },
-// let: 
-//     cmd => 
-//     push(A, {tag: 'lit', val: undefined}, 
-//             {tag: 'pop_i'},
-//             {tag: 'assmt', sym: cmd.sym, expr: cmd.expr}),
-// const:
-//     cmd =>
-//     push(A, {tag: "lit", val: undefined},
-//             {tag: 'pop_i'},
-//             {tag: 'assmt', sym: cmd.sym, expr: cmd.expr}),
-// ret:
-//     cmd =>
-//     push(A, {tag: 'reset_i'}, cmd.expr),
-// fun:
-//     cmd =>
-//     push(A, {tag:  'const',
-//              sym:  cmd.sym,
-//              expr: {tag: 'lam', prms: cmd.prms, body: cmd.body}}),
-// while:
-//     cmd =>
-//     push(A, {tag: 'lit', val: undefined},
-//             {tag: 'while_i', pred: cmd.pred, body: cmd.body},
-//             cmd.pred),
+seq: 
+    cmd => push(A, ...handle_sequence(cmd.stmts)),
+cond_stmt:
+    cmd =>
+    push(A, {tag: 'branch_i', cons: cmd.cons, alt: cmd.alt},
+            cmd.pred),
+blk:
+    cmd => {
+        const locals = scan(cmd.body)
+        const unassigneds = locals.map(_ => unassigned)
+        if (! (A.length === 0))
+            push(A, {tag: 'env_i', env: E})
+        push(A, cmd.body)
+        E = extend(locals, unassigneds, E)
+    },
+let: 
+    cmd => 
+    push(A, {tag: 'lit', val: undefined}, 
+            {tag: 'pop_i'},
+            {tag: 'assmt', sym: cmd.sym, expr: cmd.expr}),
+const:
+    cmd =>
+    push(A, {tag: "lit", val: undefined},
+            {tag: 'pop_i'},
+            {tag: 'assmt', sym: cmd.sym, expr: cmd.expr}),
+ret:
+    cmd =>
+    push(A, {tag: 'reset_i'}, cmd.expr),
+fun:
+    cmd =>
+    push(A, {tag:  'const',
+             sym:  cmd.sym,
+             expr: {tag: 'lam', prms: cmd.prms, body: cmd.body}}),
+while:
+    cmd =>
+    push(A, {tag: 'lit', val: undefined},
+            {tag: 'while_i', pred: cmd.pred, body: cmd.body},
+            cmd.pred),
 
 //
 // instructions
 //
-// reset_i:
-//     cmd =>
-//     A.pop().tag === 'mark_i'    // mark found?  
-//     ? null                    // stop loop
-//     : push(A, cmd),           // continue loop by pushing same
-//                               // reset_i instruction back on agenda
-// assmt_i:  
-//     // peek top of stash without popping:
-//     // the value remains on the stash
-//     // as the value of the assignment
-//     cmd =>
-//     assign(cmd.sym, peek(S), E),
-// unop_i:
-//     cmd => 
-//     push(S, apply_unop(cmd.sym, S.pop())),
-// binop_i: 
-//     cmd =>
-//     push(S, apply_binop(cmd.sym, S.pop(), S.pop())),
-// pop_i: 
-//     _ =>
-//     S.pop(),
-// app_i: 
-//     cmd => {
-//         const arity = cmd.arity
-//         let args = []
-//         for (let i = arity - 1; i >= 0; i--)
-//             args[i] = S.pop()
-//         const sf = S.pop()
-//         if (sf.tag === 'builtin')
-//             return push(S, apply_builtin(sf.sym, args))
-//         // remaining case: sf.tag === 'closure'
-//         if (A.length === 0 || peek(A).tag === 'env_i') {   
-//             // current E not needed:
-//             // just push mark, and not env_i
-//             push(A, {tag: 'mark_i'})
-//         } else if (peek(A).tag === 'reset_i') {            
-//             // tail call: 
-//             // The callee's ret_i will push another reset_i
-//             // which will go to the correct mark.
-//             A.pop()
-//             // The current E is not needed, because
-//             // the following reset_i is the last body 
-//             // instruction to be executed.
-//         } else {
-//             // general case:
-//             // push current environment
-//             push(A, {tag: 'env_i', env: E}, {tag: 'mark_i'}) 
-//         }
-//         push(A, sf.body)
-//         E = extend(sf.prms, args, sf.env)
-//     },
-// branch_i: 
-//     cmd => 
-//     push(A, S.pop() ? cmd.cons : cmd.alt),
-// while_i:
-//     cmd => 
-//     S.pop() 
-//     ? push(A, cmd,             // push while_i itself back on agenda
-//               cmd.pred,
-//               {tag: 'pop_i'},  // pop body value
-//               cmd.body)        
-//     : null,
-// env_i: 
-//     cmd => 
-//     E = cmd.env,
-// arr_lit_i: 
-//     cmd => {
-//         const arity = cmd.arity
-//         const array = S.slice(- arity - 1, S.length)
-//         S = S.slice(0, - arity)
-//         push(S, array)
-//     },
-// arr_acc_i:
-//     cmd => {
-//         const ind = S.pop()
-//         const arr = S.pop()
-//         push(S, arr[ind])
-//     },       
-// arr_assmt_i:
-//     cmd => {
-//         const val = S.pop()
-//         const ind = S.pop()
-//         const arr = S.pop()
-//         arr[ind] = val
-//         push(S, val)
-//     },
-// throw_i:
-//     cmd => {
-//         const next = A.pop()
-//         if (next.tag === 'catch_i') { // catch found?
-//             const catch_cmd = next  // stop loop
-//             push(A, {tag: 'env_i', env: catch_cmd.env},
-//                     catch_cmd.catch)
-//             E = extend([catch_cmd.sym], 
-//                        [S.pop()],
-//                        catch_cmd.env)
-//         } else {          // continue loop by pushing same
-//             push(A, cmd)  // throw_i instruction back on agenda
-//         }
-//     }
-// }
+reset_i:
+    cmd =>
+    A.pop().tag === 'mark_i'    // mark found?  
+    ? null                    // stop loop
+    : push(A, cmd),           // continue loop by pushing same
+                              // reset_i instruction back on agenda
+assmt_i:  
+    // peek top of stash without popping:
+    // the value remains on the stash
+    // as the value of the assignment
+    cmd =>
+    assign(cmd.sym, peek(S), E),
+unop_i:
+    cmd => 
+    push(S, apply_unop(cmd.sym, S.pop())),
+binop_i: 
+    cmd =>
+    push(S, apply_binop(cmd.sym, S.pop(), S.pop())),
+pop_i: 
+    _ =>
+    S.pop(),
+app_i: 
+    cmd => {
+        const arity = cmd.arity
+        let args = []
+        for (let i = arity - 1; i >= 0; i--)
+            args[i] = S.pop()
+        const sf = S.pop()
+        if (sf.tag === 'builtin')
+            return push(S, apply_builtin(sf.sym, args))
+        // remaining case: sf.tag === 'closure'
+        if (A.length === 0 || peek(A).tag === 'env_i') {   
+            // current E not needed:
+            // just push mark, and not env_i
+            push(A, {tag: 'mark_i'})
+        } else if (peek(A).tag === 'reset_i') {            
+            // tail call: 
+            // The callee's ret_i will push another reset_i
+            // which will go to the correct mark.
+            A.pop()
+            // The current E is not needed, because
+            // the following reset_i is the last body 
+            // instruction to be executed.
+        } else {
+            // general case:
+            // push current environment
+            push(A, {tag: 'env_i', env: E}, {tag: 'mark_i'}) 
+        }
+        push(A, sf.body)
+        E = extend(sf.prms, args, sf.env)
+    },
+branch_i: 
+    cmd => 
+    push(A, S.pop() ? cmd.cons : cmd.alt),
+while_i:
+    cmd => 
+    S.pop() 
+    ? push(A, cmd,             // push while_i itself back on agenda
+              cmd.pred,
+              {tag: 'pop_i'},  // pop body value
+              cmd.body)        
+    : null,
+env_i: 
+    cmd => 
+    E = cmd.env,
+arr_acc_i:
+    cmd => {
+        const ind = S.pop()
+        const arr = S.pop()
+        push(S, arr[ind])
+    },       
+arr_assmt_i:
+    cmd => {
+        const val = S.pop()
+        const ind = S.pop()
+        const arr = S.pop()
+        arr[ind] = val
+        push(S, val)
+    },
+arr_len_i:
+    cmd => {
+        const arr = S.pop()
+        push(S, array_length(arr))
+    },
+throw_i:
+    cmd => {
+        const next = A.pop()
+        if (next.tag === 'catch_i') { // catch found?
+            const catch_cmd = next  // stop loop
+            push(A, {tag: 'env_i', env: catch_cmd.env},
+                    catch_cmd.catch)
+            E = extend([catch_cmd.sym], 
+                       [S.pop()],
+                       catch_cmd.env)
+        } else {          // continue loop by pushing same
+            push(A, cmd)  // throw_i instruction back on agenda
+        }
+    }
+}
 
 /* ****************
  * interpreter loop
@@ -774,17 +731,16 @@ INT:
 
 const step_limit = 1000000
 
-const execute = () => {
-    A = CodeTokens
+const execute = (program) => {
+    A = [parse_to_json(program)]
     S = []
-    E = {}
+    E = global_environment
     let i = 0
-    A.reverse()
     while (i < step_limit) {
         if (A.length === 0) break
         const cmd = A.pop()
-        if (microcode.hasOwnProperty(cmd.tokenClass)) {
-            microcode[cmd.tokenClass](cmd)
+        if (microcode.hasOwnProperty(cmd.tag)) {
+            microcode[cmd.tag](cmd)
             //debug(cmd)
         } else {
             error("", "unknown command: " + 
@@ -795,10 +751,10 @@ const execute = () => {
     if (i === step_limit) {
         error("step limit " + stringify(step_limit) + " exceeded")
     }
-    if (S.length > 0 || S.length < 0) {
-        error(S, 'internal error: stash must be empty after every call but is: ')
+    if (S.length > 1 || S.length < 1) {
+        error(S, 'internal error: stash must be singleton but is: ')
     }
-    return display(S)
+    return display(S[0])
 }
 
 /* *********
@@ -839,20 +795,31 @@ const debug = (cmd) => {
  * testing
  * *******/
  
-const test = (expected) => {
-    display("", `
+// const test = (expected) => {
+//     display("", `
     
-****************
-Test case: ` + "\n")
-    const result = execute()
-    if (stringify(result) === stringify(expected)) {
-        display(result, "success:")
-    } else {
-        display(expected, "FAILURE! expected:")
-        error(result, "result:")
-    }
-}
+// ****************
+// Test case: ` + "\n")
+//     const result = execute()
+//     if (stringify(result) === stringify(expected)) {
+//         display(result, "success:")
+//     } else {
+//         display(expected, "FAILURE! expected:")
+//         error(result, "result:")
+//     }
+// }
 
 // example test case:
-test([])
+// test([])
 //
+
+// console.log(Parse("int a; int b;"))
+
+// async function loadMyModule() {
+//     const { Parse } = await import('../parser/antlr/antlr_parser.js');
+//     let res = Parse("int a; int b;");
+//     console.log(res);
+//   }
+//   loadMyModule();
+
+printNestedArray(CodeTokens)

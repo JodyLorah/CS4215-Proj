@@ -5,11 +5,11 @@
  *
  * By Ciaran Gruber and Jody Tang
  */
+import * as fs from 'fs';
 import { CharStream, CommonTokenStream } from 'antlr4';
 import CVisitor from './antlr_gen/CVisitor.js';
 import CLexer from "./antlr_gen/CLexer.js"; // Had to add .js - This is a hack
 import CParser, { AdditiveExpressionContext, MultiplicativeExpressionContext } from "./antlr_gen/CParser.js";
-// import CompilationUnitVisitor from "../compiler/CompilationUnitVisitor";
 function isType(x) {
     return x !== null;
 }
@@ -93,7 +93,6 @@ class Visitor extends CVisitor {
     // @ts-ignore
     visitCompilationUnit(ctx) {
         let rtn = ctx.translationUnit().accept(this);
-        printNestedArray(rtn);
         return rtn;
     }
     // @ts-ignore
@@ -313,7 +312,7 @@ class Visitor extends CVisitor {
         return this.visitAssignmentExpression(ctx.assignmentExpression());
     }
 }
-export function parseInput(input) {
+function parseInput(input) {
     const chars = new CharStream(input); // replace this with a FileStream as required
     let lexer = new CLexer(chars);
     let tokenStream = new CommonTokenStream(lexer);
@@ -321,23 +320,19 @@ export function parseInput(input) {
     // Parse the input, where `compilationUnit` is whatever entry point you defined
     return parser.compilationUnit();
 }
-const tree = parseInput(`
-
-int f(int b, int c){int d = 2;}
-
-int func(int x, int y) {
-    int e = 1;
-    int h = 2;
+function Parse(input) {
+    const tree = parseInput(input);
+    const instructions = tree.accept(new Visitor());
+    return JSON.stringify(instructions, null, 0);
 }
-`);
-const instructions = tree.accept(new Visitor());
-// int a = -3 * 4 - 5 + 6 / 7 - 8;
-// int b = !34;
-// int a = 1;
-// int f(int b, int c){int d = 2;}
-// int func(int x, int y) {
-//     int e = 1;
-//     int h = 2;
-// }
-// int g = 2;
+const code = fs.readFileSync('./code.c', 'utf8');
+// convert JSON object to a string
+// export const jsonTokens = JSON.stringify(instructions, null, 0)
+// console.log(jsonTokens);
+// write JSON string to a file
+fs.writeFile('antlr_tokens.json', Parse(code), err => {
+    if (err) {
+        throw err;
+    }
+});
 //# sourceMappingURL=antlr_parser.js.map
