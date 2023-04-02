@@ -11,6 +11,21 @@ var CodeTokens = require('../parser/antlr/antlr_tokens.json');
  * ****************************************/
 
 /* *************
+ * dictionary functions
+ * *************/
+const dict_has_key = (d, val) => {
+    return true ? d[val] != undefined : false
+}
+
+const dict_get = (d, val) => {
+    return d[val] ? dict_has_key(d, val) : error(d, "No value in ")
+}
+
+const dict_set = (d, key, input) => {
+    d[key] = input;
+}
+
+/* *************
  * parse to JSON
  * *************/
 
@@ -40,12 +55,12 @@ const parameters = xs =>
         xs)
 
 // turn tagged list syntax from parse into JSON object
-const ast_to_json = t => {
+const ast_to_json = (t) => {
     switch (head(t)) {
         case "literal":
             return { tag: "lit", val: head(tail(t)) }
-        case "name":
-            return { tag: "nam", sym: head(tail(t)) }
+        case "name": 
+            return { tag: "nam", sym: head(tail(t)), type: head(tail(tail(t))) }
         case "application":
             return {
                 tag: "app",
@@ -130,6 +145,7 @@ const ast_to_json = t => {
             return {
                 tag: "let",
                 sym: head(tail(head(tail(t)))),
+                type: head(tail(tail(head(tail(t))))),
                 expr: ast_to_json(head(tail(tail(t))))
             }
         case "constant_declaration":
@@ -199,9 +215,25 @@ const ast_to_json = t => {
 
 // parse, turn into json (using ast_to_json), 
 // and wrap in a block
-const parse_to_json = program_text =>
+const parse_to_json = tokens =>
     ({tag: "blk",
-      body: ast_to_json(parse(program_text))});
+      body: ast_to_json(tokens)});
+
+
+const store_global_dec = tokens => {
+    let globalDecs = tokens.body.tag
+    if (globalDecs === undefined) {
+        let body = tokens.body
+        dict_set(SM, body.sym, body)
+    } else if (globalDecs === "seq") {
+        let decs = tokens.body.stmts
+        for (var i in decs) {
+            dict_set(SM, decs[i].sym, decs[i])
+        }
+    } else {
+        error("Illegal Global Declaration")
+    }
+}
 
 /* *************************
  * values of the interpreter
@@ -512,7 +544,9 @@ let S
 // See *environments* above. Execution initializes 
 // environment E as the global environment.
 
-let E
+// Static memory SM
+// Stores all global variables / external declarations
+let SM
 
 /* *********************
  * interpreter microcode
@@ -731,31 +765,44 @@ throw_i:
 
 const step_limit = 1000000
 
-const execute = (program) => {
-    A = [parse_to_json(program)]
-    S = []
-    E = global_environment
-    let i = 0
-    while (i < step_limit) {
-        if (A.length === 0) break
-        const cmd = A.pop()
-        if (microcode.hasOwnProperty(cmd.tag)) {
-            microcode[cmd.tag](cmd)
-            //debug(cmd)
-        } else {
-            error("", "unknown command: " + 
-                      command_to_string(cmd))
-        }
-        i++
+const execute = () => {
+    SM = {}
+    const declarations = parse_to_json(CodeTokens)
+    store_global_dec(declarations)
+    
+    // if no main func, error out
+    if (!dict_has_key(SM, "main")) {
+        error("main function not defined")
     }
-    if (i === step_limit) {
-        error("step limit " + stringify(step_limit) + " exceeded")
-    }
-    if (S.length > 1 || S.length < 1) {
-        error(S, 'internal error: stash must be singleton but is: ')
-    }
-    return display(S[0])
+
+
+
+
+    // A = [parse_to_json(program)]
+    // S = []
+    // E = global_environment
+    // let i = 0
+    // while (i < step_limit) {
+    //     if (A.length === 0) break
+    //     const cmd = A.pop()
+    //     if (microcode.hasOwnProperty(cmd.tag)) {
+    //         microcode[cmd.tag](cmd)
+    //         //debug(cmd)
+    //     } else {
+    //         error("", "unknown command: " + 
+    //                   command_to_string(cmd))
+    //     }
+    //     i++
+    // }
+    // if (i === step_limit) {
+    //     error("step limit " + stringify(step_limit) + " exceeded")
+    // }
+    // if (S.length > 1 || S.length < 1) {
+    //     error(S, 'internal error: stash must be singleton but is: ')
+    // }
+    // return display(S[0])
 }
+
 
 /* *********
  * debugging
@@ -791,35 +838,28 @@ const debug = (cmd) => {
     
 }
 
+// CodeTokens = ["variable_declaration", [["name", ["i", null]], [["literal", [2, null]], null]]]
+
+
+
+
 /* *******
  * testing
  * *******/
  
-// const test = (expected) => {
-//     display("", `
+const test = (expected) => {
+    display("", `
     
-// ****************
-// Test case: ` + "\n")
-//     const result = execute()
-//     if (stringify(result) === stringify(expected)) {
-//         display(result, "success:")
-//     } else {
-//         display(expected, "FAILURE! expected:")
-//         error(result, "result:")
-//     }
-// }
+****************
+Test case: ` + "\n")
+    const result = execute()
+    if (stringify(result) === stringify(expected)) {
+        display(result, "success:")
+    } else {
+        display(expected, "FAILURE! expected:")
+        error(result, "result:")
+    }
+}
+test(undefined)
 
-// example test case:
-// test([])
-//
-
-// console.log(Parse("int a; int b;"))
-
-// async function loadMyModule() {
-//     const { Parse } = await import('../parser/antlr/antlr_parser.js');
-//     let res = Parse("int a; int b;");
-//     console.log(res);
-//   }
-//   loadMyModule();
-
-printNestedArray(CodeTokens)
+// printNestedArray(CodeTokens)
