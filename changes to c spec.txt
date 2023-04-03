@@ -9,3 +9,5 @@ dont support void (only char int double)
 dont support type qualifiers (const not supported)
 
 dont allow stray ; in external declarations (;;; int a; int main(){return 0} not allowed bc of starting ;;;)
+
+must return things aft function (no return ;)

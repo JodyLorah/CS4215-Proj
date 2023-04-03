@@ -18,7 +18,11 @@ const dict_has_key = (d, val) => {
 }
 
 const dict_get = (d, val) => {
-    return d[val] ? dict_has_key(d, val) : error(d, "No value in ")
+    if (dict_has_key(d, val)) {
+        return d[val]
+    } else {
+        error(d, "No value in ")
+    }
 }
 
 const dict_set = (d, key, input) => {
@@ -222,14 +226,14 @@ const parse_to_json = tokens =>
 
 const store_global_dec = tokens => {
     let globalDecs = tokens.body.tag
-    if (globalDecs === undefined) {
-        let body = tokens.body
-        dict_set(SM, body.sym, body)
-    } else if (globalDecs === "seq") {
+    if (globalDecs === "seq") {
         let decs = tokens.body.stmts
         for (var i in decs) {
             dict_set(SM, decs[i].sym, decs[i])
         }
+    }  else if (globalDecs === "fun") {
+        let body = tokens.body
+        dict_set(SM, body.sym, body)
     } else {
         error("Illegal Global Declaration")
     }
@@ -411,16 +415,10 @@ global_frame.math_SQRT2   = math_SQRT2
 const empty_environment = null
 const global_environment = pair(global_frame, empty_environment)
 
-const lookup = (x, e) => {
-    if (is_null(e)) 
+const lookup = (mem, key) => {
+    if (!dict_has_key(mem, key)) 
         error(x, 'unbound name:')
-    if (head(e).hasOwnProperty(x)) {
-        const v = head(e)[x]
-        if (is_unassigned(v))
-            error(cmd.sym, 'unassigned name:')
-        return v
-    }
-    return lookup(x, tail(e))
+    return dict_get(mem, key)
 }
 
 const assign = (x, v, e) => {
@@ -514,21 +512,6 @@ const peek = array =>
 // S: stash: stack of values
 // E: environment: list of frames
 
-// agenda A
-
-// The agenda A is a stack of commands that still need
-// to be executed by the interpreter. The agenda follows 
-// stack discipline: pop, push, peek at end of the array.
-
-// Commands are nodes of syntax tree or instructions.
-
-// Instructions are objects whose tag value ends in '_i'.
-
-// Execution initializes A as a singleton array
-// containing the given program.
-
-let A
-
 // stash S 
 
 // stash S is array of values that stores intermediate 
@@ -536,16 +519,21 @@ let A
 // pop, push, peek at the end of the array.
 
 // Execution initializes stash S as an empty array.
-
 let S
 
-// environment E
+// Run time stack RTS
 
-// See *environments* above. Execution initializes 
-// environment E as the global environment.
+// stash S is array of values that stores instructions
+// of main function.
+
+// Execution initializes stash S as an empty array.
+
+let RTS
 
 // Static memory SM
 // Stores all global variables / external declarations
+
+// initialised as an empty dictionary
 let SM
 
 /* *********************
@@ -559,7 +547,9 @@ let SM
 // a function that takes a command as argument and 
 // changes the configuration according to the meaning of
 // the command. The return value is not used.
-        
+
+let A // dummy init
+
 const microcode = {
 //
 // expressions
@@ -572,10 +562,10 @@ nam:
     push(S, lookup(cmd.sym, E)),
 unop:
     cmd =>
-    push(A, {tag: 'unop_i', sym: cmd.sym}, cmd.frst),
+    push(RTS, {tag: 'unop_i', sym: cmd.sym}, cmd.frst),
 binop:
     cmd =>
-    push(A, {tag: 'binop_i', sym: cmd.sym}, cmd.scnd, cmd.frst),
+    push(RTS, {tag: 'binop_i', sym: cmd.sym}, cmd.scnd, cmd.frst),
 log:
     cmd => 
     push(A, cmd.sym == '&&' 
@@ -597,7 +587,7 @@ app:
             cmd.fun),
 assmt: 
     cmd =>
-    push(A, {tag: 'assmt_i', sym: cmd.sym}, cmd.expr),
+    push(RTS, {tag: 'assmt_i', sym: cmd.sym}, cmd.expr),
 lam:
     cmd =>
     push(S, {tag: 'closure', prms: cmd.prms, body: cmd.body, env: E}),
@@ -644,7 +634,7 @@ const:
             {tag: 'assmt', sym: cmd.sym, expr: cmd.expr}),
 ret:
     cmd =>
-    push(A, {tag: 'reset_i'}, cmd.expr),
+    push(RTS, {tag: 'reset_i'}, cmd.expr),
 fun:
     cmd =>
     push(A, {tag:  'const',
@@ -661,7 +651,7 @@ while:
 //
 reset_i:
     cmd =>
-    A.pop().tag === 'mark_i'    // mark found?  
+    RTS.pop().tag === 'mark_i'    // mark found?  
     ? null                    // stop loop
     : push(A, cmd),           // continue loop by pushing same
                               // reset_i instruction back on agenda
@@ -767,14 +757,34 @@ const step_limit = 1000000
 
 const execute = () => {
     SM = {}
+    S = []
+    RTS = []
     const declarations = parse_to_json(CodeTokens)
     store_global_dec(declarations)
-    console.log(SM);
     
     // if no main func, error out
-    // if (!dict_has_key(SM, "main")) {
-    //     error("main function not defined")
-    // }
+    if (!dict_has_key(SM, "main")) {
+        error("main function not defined")
+    }
+
+
+    push(RTS, dict_get(SM, "main").body )
+
+    let i = 0
+    while (i < step_limit) {
+        console.log(RTS)
+        if (RTS.length == 0) break
+        const cmd = RTS.pop()
+        if (microcode.hasOwnProperty(cmd.tag)) {
+            microcode[cmd.tag](cmd)
+            //debug(cmd)
+        } else {
+            error("", "unknown command: " + 
+                        command_to_string(cmd))
+        }
+        i++
+    }
+    console.log(SM)
 
 
 

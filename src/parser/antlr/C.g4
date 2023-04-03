@@ -34,15 +34,15 @@
         :   Identifier
         |   Constant
         |   StringLiteral+
-        |   '(' expression ')'
+        |   '(' assignmentExpression ')'
         ;
 
     postfixExpression
         : primaryExpression
-        ('[' expression ']'
-        | '(' argumentExpressionList? ')'
+        //('[' assignmentExpression ']' /* TO REVIEW */
+        //| '(' argumentExpressionList? ')'/* TO REVIEW */
         //| ('++' | '--') /* TO REVIEW */
-        )*
+        //)*
         ;
 
     argumentExpressionList
@@ -123,15 +123,11 @@
 
     assignmentExpression
         :   conditionalExpression
-        |   unaryExpression assignmentOperator assignmentExpression
+        |   unaryExpression assignmentOperator conditionalExpression
         ;
 
     assignmentOperator
-        :   '=' | '*=' | '/=' | '%=' | '+=' | '-='  
-        ;
-
-    expression
-        :   assignmentExpression 
+        :   '=' // | '*=' | '/=' | '%=' | '+=' | '-='  // TO REVIEW
         ;
 
     constantExpression
@@ -233,19 +229,19 @@
         ;
 
     expressionStatement
-        :   expression? ';'
+        :   assignmentExpression ';'
         ;
 
     selectionStatement
-        :   'if' '(' expression ')' statement ('else' statement)?
+        :   'if' '(' assignmentExpression ')' statement ('else' statement)?
         ;
 
     iterationStatement
-        :   While '(' expression ')' statement
+        :   While '(' assignmentExpression ')' statement
         ;
 
     jumpStatement
-        :  'return' expression? ';'
+        :  'return' assignmentExpression? ';'
         ;
 
     compilationUnit

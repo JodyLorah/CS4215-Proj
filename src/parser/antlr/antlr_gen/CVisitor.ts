@@ -18,7 +18,6 @@ import { LogicalOrExpressionContext } from "./CParser";
 import { ConditionalExpressionContext } from "./CParser";
 import { AssignmentExpressionContext } from "./CParser";
 import { AssignmentOperatorContext } from "./CParser";
-import { ExpressionContext } from "./CParser";
 import { ConstantExpressionContext } from "./CParser";
 import { DeclarationContext } from "./CParser";
 import { InitDeclaratorContext } from "./CParser";
@@ -148,12 +147,6 @@ export default class CVisitor<Result> extends ParseTreeVisitor<Result> {
 	 * @return the visitor result
 	 */
 	visitAssignmentOperator?: (ctx: AssignmentOperatorContext) => Result;
-	/**
-	 * Visit a parse tree produced by `CParser.expression`.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	visitExpression?: (ctx: ExpressionContext) => Result;
 	/**
 	 * Visit a parse tree produced by `CParser.constantExpression`.
 	 * @param ctx the parse tree

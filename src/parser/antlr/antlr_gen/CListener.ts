@@ -18,7 +18,6 @@ import { LogicalOrExpressionContext } from "./CParser";
 import { ConditionalExpressionContext } from "./CParser";
 import { AssignmentExpressionContext } from "./CParser";
 import { AssignmentOperatorContext } from "./CParser";
-import { ExpressionContext } from "./CParser";
 import { ConstantExpressionContext } from "./CParser";
 import { DeclarationContext } from "./CParser";
 import { InitDeclaratorContext } from "./CParser";
@@ -205,16 +204,6 @@ export default class CListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	exitAssignmentOperator?: (ctx: AssignmentOperatorContext) => void;
-	/**
-	 * Enter a parse tree produced by `CParser.expression`.
-	 * @param ctx the parse tree
-	 */
-	enterExpression?: (ctx: ExpressionContext) => void;
-	/**
-	 * Exit a parse tree produced by `CParser.expression`.
-	 * @param ctx the parse tree
-	 */
-	exitExpression?: (ctx: ExpressionContext) => void;
 	/**
 	 * Enter a parse tree produced by `CParser.constantExpression`.
 	 * @param ctx the parse tree

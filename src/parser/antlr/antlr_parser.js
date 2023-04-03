@@ -79,7 +79,6 @@ class Visitor extends CVisitor {
     // @ts-ignore
     visitCompilationUnit(ctx) {
         let rtn = ctx.translationUnit().accept(this);
-        printNestedArray(rtn);
         return rtn;
     }
     // @ts-ignore
@@ -134,7 +133,7 @@ class Visitor extends CVisitor {
         let rtn = null;
         lst = lst.reverse();
         for (var i in lst) {
-            rtn = [lst[i].accept(this), rtn];
+            rtn = [this.visitBlockItem(lst[i]), rtn];
         }
         return ["sequence", [rtn, null]];
     }
@@ -148,18 +147,25 @@ class Visitor extends CVisitor {
     // @ts-ignore
     visitStatement(ctx) {
         if (isType(ctx.compoundStatement())) {
-            return ctx.compoundStatement.accept(this);
+            return ctx.compoundStatement().accept(this);
         }
         else if (isType(ctx.jumpStatement())) {
-            return this.visitJumpStatement(ctx.jumpStatement());
+            return ctx.jumpStatement().accept(this);
+        }
+        else if (isType(ctx.expressionStatement())) {
+            return ctx.expressionStatement().accept(this);
         }
         else {
-            // TODO: iteration, selection, expression statement
+            // TODO: iteration, selection statement
         }
     }
     // @ts-ignore
+    visitExpressionStatement(ctx) {
+        return this.visitAssignmentExpression(ctx.assignmentExpression());
+    }
+    // @ts-ignore
     visitJumpStatement(ctx) {
-        let rtn = ["return_statement", [ctx.expression().accept(this), null]];
+        let rtn = ["return_statement", [ctx.assignmentExpression().accept(this), null]];
         return rtn;
     }
     // @ts-ignore
@@ -168,12 +174,12 @@ class Visitor extends CVisitor {
         const initDec = ctx.initDeclarator();
         let name = this.visitDirectDeclarator(initDec.directDeclarator());
         let dd = ["name", [name, [stringifyType(type), null]]];
+        let rtn = ["variable_declaration", [dd, [null, null]]];
         if (isType(initDec.Assign())) {
             let rhs = initDec.initializer().accept(this);
-            let rtn = ["variable_declaration", [dd, [rhs, null]]];
-            return rtn;
+            rtn = ["variable_declaration", [dd, [rhs, null]]];
         }
-        return dd;
+        return rtn;
     }
     // @ts-ignore
     visitDirectDeclarator(ctx) {
@@ -214,7 +220,12 @@ class Visitor extends CVisitor {
     }
     // @ts-ignore
     visitAssignmentExpression(ctx) {
-        return ctx.conditionalExpression().accept(this);
+        let ce = ctx.conditionalExpression().accept(this);
+        if (!isType(ctx.assignmentOperator())) {
+            return ce;
+        }
+        let ue = ctx.unaryExpression().accept(this);
+        return ["assignment", [ue, [ce, null]]];
     }
     // @ts-ignore
     visitConditionalExpression(ctx) {
@@ -302,9 +313,8 @@ class Visitor extends CVisitor {
     // @ts-ignore
     visitPrimaryExpression(ctx) {
         if (isType(ctx.Identifier())) {
-            const type = ctx.typeSpecifier();
             const name = ctx.Identifier().getText();
-            return ["name", [name, [stringifyType(type), null]]];
+            return ["name", [name, [null, null]]];
         }
         else if (isType(ctx.Constant())) {
             let rtn = ["literal", [ctx.Constant().getText(), null]];
@@ -335,11 +345,11 @@ function Parse(input) {
     return JSON.stringify(instructions, null, 0);
 }
 const code = fs.readFileSync('./code.c', 'utf8');
-Parse(code);
+const parsed = Parse(code);
 // write JSON string to a file
-// fs.writeFile('antlr_tokens.json', Parse(code), err => {
-//     if (err) {
-//         throw err
-//     }
-// })
+fs.writeFile('antlr_tokens.json', parsed, err => {
+    if (err) {
+        throw err;
+    }
+});
 //# sourceMappingURL=antlr_parser.js.map

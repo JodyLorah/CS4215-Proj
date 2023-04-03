@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import {CharStream, CommonTokenStream} from 'antlr4';
 import CVisitor from './antlr_gen/CVisitor.js';
 import CLexer from "./antlr_gen/CLexer.js"; // Had to add .js - This is a hack
-import CParser, {AdditiveExpressionContext, AssignmentExpressionContext, BlockItemContext, BlockItemListContext, CompilationUnitContext, DeclarationContext, DirectDeclaratorContext, FunctionDefinitionContext, InitializerContext, MultiplicativeExpressionContext, ParameterDeclarationContext, ParameterListContext, TranslationUnitContext, TypeSpecifierContext} from "./antlr_gen/CParser.js";
+import CParser, {AdditiveExpressionContext, AssignmentExpressionContext, BlockItemContext, BlockItemListContext, CompilationUnitContext, DeclarationContext, DirectDeclaratorContext, ExpressionStatementContext, FunctionDefinitionContext, InitializerContext, MultiplicativeExpressionContext, ParameterDeclarationContext, ParameterListContext, PostfixExpressionContext, TranslationUnitContext, TypeSpecifierContext} from "./antlr_gen/CParser.js";
 
 function isType(x: any): boolean {
     return x !== null;
@@ -79,7 +79,6 @@ class Visitor extends CVisitor<Array<object>> {
     // @ts-ignore
     visitCompilationUnit(ctx: CompilationUnitContext) {
         let rtn = ctx.translationUnit().accept(this)
-        printNestedArray(rtn)
         return rtn
     }
 
@@ -144,7 +143,7 @@ class Visitor extends CVisitor<Array<object>> {
         let rtn = null;
         lst = lst.reverse()
         for (var i in lst) {
-            rtn = [lst[i].accept(this), rtn]
+            rtn = [this.visitBlockItem(lst[i]), rtn]
         }
         return ["sequence", [rtn, null]]
     }
@@ -160,17 +159,24 @@ class Visitor extends CVisitor<Array<object>> {
     // @ts-ignore
     visitStatement(ctx: StatementContext) {
         if (isType(ctx.compoundStatement())) {
-            return ctx.compoundStatement.accept(this)
+            return ctx.compoundStatement().accept(this)
         } else if (isType(ctx.jumpStatement())) {
-            return this.visitJumpStatement(ctx.jumpStatement())
+            return ctx.jumpStatement().accept(this)
+        } else if (isType(ctx.expressionStatement())) {
+            return ctx.expressionStatement().accept(this)
         } else {
-            // TODO: iteration, selection, expression statement
+            // TODO: iteration, selection statement
         }
     }
 
     // @ts-ignore
+    visitExpressionStatement(ctx: ExpressionStatementContext) {
+        return this.visitAssignmentExpression(ctx.assignmentExpression())
+    }
+
+    // @ts-ignore
     visitJumpStatement(ctx: JumpStatementContext) {
-        let rtn = ["return_statement", [ctx.expression().accept(this), null]]
+        let rtn = ["return_statement", [ctx.assignmentExpression().accept(this), null]]
         return rtn;
     }
 
@@ -180,13 +186,13 @@ class Visitor extends CVisitor<Array<object>> {
         const initDec = ctx.initDeclarator()
         let name = this.visitDirectDeclarator(initDec.directDeclarator());
         let dd = ["name", [name, [stringifyType(type), null]]]
+        let rtn = ["variable_declaration", [dd, [null, null]]]
 
         if (isType(initDec.Assign())) {
             let rhs = initDec.initializer().accept(this);
-            let rtn = ["variable_declaration", [dd, [rhs, null]]]
-            return rtn
+            rtn = ["variable_declaration", [dd, [rhs, null]]]
         }
-        return dd
+        return rtn
     }
 
     // @ts-ignore
@@ -230,7 +236,12 @@ class Visitor extends CVisitor<Array<object>> {
 
     // @ts-ignore
     visitAssignmentExpression(ctx: AssignmentExpressionContext) {
-        return ctx.conditionalExpression().accept(this);
+        let ce = ctx.conditionalExpression().accept(this);
+        if (!isType(ctx.assignmentOperator())) {
+            return ce
+        }
+        let ue = ctx.unaryExpression().accept(this)
+        return ["assignment", [ue, [ce, null]]]
     }
 
     // @ts-ignore
@@ -335,9 +346,8 @@ class Visitor extends CVisitor<Array<object>> {
     // @ts-ignore
     visitPrimaryExpression(ctx: PrimaryExpressionContext) {
         if (isType(ctx.Identifier())) {
-            const type = ctx.typeSpecifier()
             const name = ctx.Identifier().getText()
-            return ["name", [name, [stringifyType(type), null]]]
+            return ["name", [name, [null, null]]]
         } else if  (isType(ctx.Constant())) {
             let rtn = ["literal", [ctx.Constant().getText(), null]]
             return rtn
@@ -371,11 +381,11 @@ function Parse(input: string) {
 }
 
 const code = fs.readFileSync('./code.c', 'utf8');
-Parse(code)
+const parsed = Parse(code)
 
 // write JSON string to a file
-// fs.writeFile('antlr_tokens.json', Parse(code), err => {
-//     if (err) {
-//         throw err
-//     }
-// })
+fs.writeFile('antlr_tokens.json', parsed, err => {
+    if (err) {
+        throw err
+    }
+})
