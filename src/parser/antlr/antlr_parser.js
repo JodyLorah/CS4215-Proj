@@ -317,7 +317,7 @@ class Visitor extends CVisitor {
             return ["name", [name, [null, null]]];
         }
         else if (isType(ctx.Constant())) {
-            let rtn = ["literal", [ctx.Constant().getText(), null]];
+            let rtn = ["literal", [Number(ctx.Constant().getText()), null]];
             return rtn;
             // } else if (isType(ctx.StringLiteral())) {
             //     // TODO
