@@ -1,1 +1,1 @@
-["sequence",[[["name",["a",["int",null]]],[["function_declaration",[["name",["b",["int",null]]],[null,[["sequence",[null,null]],null]]]],[["variable_declaration",[["name",["c",["int",null]]],[["literal",["2",null]],null]]],null]]],null]]
+["sequence",[[["function_declaration",[["name",["b",["int",null]]],[null,[["block",[null,null]],null]]]],[["variable_declaration",[["name",["c",["int",null]]],[["literal",["2",null]],null]]],[["variable_declaration",[["name",["d",["int",null]]],[["literal",["3",null]],null]]],null]]],null]]

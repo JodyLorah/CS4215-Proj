@@ -76,27 +76,10 @@ class Visitor extends CVisitor<Array<object>> {
         super();
     }
 
-    
-    // visitCompilationUnit(ctx: CompilationUnitContext) {
-        
-    //     return vector_to_list([
-    //         "compilation_unit",
-    //         ctx.translationUnit().accept(this)
-    // ]);
-    // }
-
-    // visitTranslationUnit(ctx: TranslationUnitContext) {
-    //     list = []
-    //     ctx.externalDeclaration_list().forEach((x) => list.append(x));
-    //     return vector_to_list([
-    //         "translation_unit",
-    //         list.expand();
-    //     ]);
-    // }
-
     // @ts-ignore
     visitCompilationUnit(ctx: CompilationUnitContext) {
         let rtn = ctx.translationUnit().accept(this)
+        printNestedArray(rtn)
         return rtn
     }
 
@@ -129,16 +112,20 @@ class Visitor extends CVisitor<Array<object>> {
         const type = ctx.typeSpecifier()
         const name = ["name", [ctx.directDeclarator().directDeclarator().getText(), [stringifyType(type), null]]]
         let funcParams = null
-        let funcBody = ["sequence", [null, null]]
+        let emptyBody = [["sequence", [null, null]], null]
 
         if (isType(ctx.directDeclarator().parameterList())) {
             funcParams = ctx.directDeclarator().parameterList().accept(this)
         }
 
         if (isType(ctx.compoundStatement().blockItemList())) {
-            funcBody = ["block", [this.visitBlockItemList(ctx.compoundStatement().blockItemList()), null]]
+            let funcBody = this.visitBlockItemList(ctx.compoundStatement().blockItemList())
+            if (ctx.compoundStatement().blockItemList().blockItem_list().length > 1) {
+                funcBody = ["block", funcBody]
+            }
+            return ["function_declaration", [name, [funcParams, [funcBody, null]]]]
         }
-        return ["function_declaration", [name, [funcParams,[funcBody, null]]]]
+        return ["function_declaration", [name, [funcParams, emptyBody]]]
 
     }
 
@@ -146,7 +133,10 @@ class Visitor extends CVisitor<Array<object>> {
     visitBlockItemList(ctx: BlockItemListContext) {
         let lst = ctx.blockItem_list()
         if (lst.length == 1) {
-            return lst[0].accept(this)
+            if (isType(lst[0].statement())) {
+                return this.visitStatement(lst[0].statement())
+            }
+            return this.visitDeclaration(lst[0].declaration())
         }
 
         let rtn = null;
@@ -161,9 +151,25 @@ class Visitor extends CVisitor<Array<object>> {
     visitBlockItem(ctx: BlockItemContext) {
         if (isType(ctx.declaration())) {
             return ctx.declaration().accept(this)
-        } else {
-            // TODO: Statement type
         }
+        return ctx.statement().accept(this)
+    }
+
+    // @ts-ignore
+    visitStatement(ctx: StatementContext) {
+        if (isType(ctx.compoundStatement())) {
+            return ctx.compoundStatement.accept(this)
+        } else if (isType(ctx.jumpStatement())) {
+            return this.visitJumpStatement(ctx.jumpStatement())
+        } else {
+            // TODO: iteration, selection, expression statement
+        }
+    }
+
+    // @ts-ignore
+    visitJumpStatement(ctx: JumpStatementContext) {
+        let rtn = ["return_statement", [ctx.expression().accept(this), null]]
+        return rtn;
     }
 
     // @ts-ignore
@@ -363,14 +369,11 @@ function Parse(input: string) {
 }
 
 const code = fs.readFileSync('./code.c', 'utf8');
-
-// convert JSON object to a string
-// export const jsonTokens = JSON.stringify(instructions, null, 0)
-// console.log(jsonTokens);
+Parse(code)
 
 // write JSON string to a file
-fs.writeFile('antlr_tokens.json', Parse(code), err => {
-    if (err) {
-        throw err
-    }
-})
+// fs.writeFile('antlr_tokens.json', Parse(code), err => {
+//     if (err) {
+//         throw err
+//     }
+// })
