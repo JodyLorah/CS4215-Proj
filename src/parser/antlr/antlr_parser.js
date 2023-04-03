@@ -114,11 +114,11 @@ class Visitor extends CVisitor {
             funcParams = ctx.directDeclarator().parameterList().accept(this);
         }
         if (isType(ctx.compoundStatement().blockItemList())) {
-            let funcBody = this.visitBlockItemList(ctx.compoundStatement().blockItemList());
+            let funcBody = [this.visitBlockItemList(ctx.compoundStatement().blockItemList()), null];
             if (ctx.compoundStatement().blockItemList().blockItem_list().length > 1) {
-                funcBody = ["block", funcBody];
+                funcBody = [["block", funcBody], null];
             }
-            return ["function_declaration", [name, [funcParams, [funcBody, null]]]];
+            return ["function_declaration", [name, [funcParams, funcBody]]];
         }
         return ["function_declaration", [name, [funcParams, emptyBody]]];
     }

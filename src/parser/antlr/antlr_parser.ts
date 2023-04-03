@@ -119,11 +119,13 @@ class Visitor extends CVisitor<Array<object>> {
         }
 
         if (isType(ctx.compoundStatement().blockItemList())) {
-            let funcBody = this.visitBlockItemList(ctx.compoundStatement().blockItemList())
+            let funcBody = [this.visitBlockItemList(ctx.compoundStatement().blockItemList()), null]
+
             if (ctx.compoundStatement().blockItemList().blockItem_list().length > 1) {
-                funcBody = ["block", funcBody]
-            }
-            return ["function_declaration", [name, [funcParams, [funcBody, null]]]]
+                funcBody = [["block", funcBody], null]
+            } 
+            return ["function_declaration", [name, [funcParams, funcBody]]]
+            
         }
         return ["function_declaration", [name, [funcParams, emptyBody]]]
 

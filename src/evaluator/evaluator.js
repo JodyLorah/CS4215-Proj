@@ -769,13 +769,14 @@ const execute = () => {
     SM = {}
     const declarations = parse_to_json(CodeTokens)
     store_global_dec(declarations)
+    console.log(SM);
     
     // if no main func, error out
-    if (!dict_has_key(SM, "main")) {
-        error("main function not defined")
-    }
+    // if (!dict_has_key(SM, "main")) {
+    //     error("main function not defined")
+    // }
 
-    
+
 
 
 
