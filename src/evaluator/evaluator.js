@@ -3,7 +3,6 @@
 Object.entries(require('sicp'))
     .forEach(([name, exported]) => global[name] = exported);
 
-const { isNull } = require('util');
 // import parsed code as tokens
 var CodeTokens = require('../parser/antlr/antlr_tokens.json');
 // import Parse from '../parser/antlr/antlr_parser.js';
@@ -50,10 +49,22 @@ const list_to_array = xs =>
         ? []
         : [head(xs)].concat(list_to_array(tail(xs)))
 
+const make_param_obj = xs => {
+    return {sym: head(tail(xs)), type: head(tail(tail(xs)))}
+}
+
 // simplify parameter format
-const parameters = xs =>
-    map(x => head(tail(x)),
-        xs)
+const parameters = (rtn, xs) => {
+    if (is_null(xs)) {
+        return rtn
+    }
+    let obj = make_param_obj(head(xs))
+    rtn.push(obj)
+    if (is_null(tail(xs))) {
+        return rtn
+    }
+    return parameters(rtn, tail(xs))
+}
 
 // turn tagged list syntax from parse into JSON object
 const ast_to_json = (t) => {
@@ -69,7 +80,7 @@ const ast_to_json = (t) => {
             return {
                 tag: "app",
                 fun: ast_to_json(head(tail(t))),
-                args: list_to_array(map(ast_to_json, head(tail(tail(t)))))
+                args: parameters([], head(tail(tail(t))))
                     .reverse()  // microcode for app expects arg
                                 // expressions in reverse order
             }
@@ -132,7 +143,8 @@ const ast_to_json = (t) => {
         case "lambda_expression":
             return {
                 tag: "lam",
-                prms: list_to_array(parameters(head(tail(t)))),
+                prms: head(tail(t)),
+                // prms: parameters([], head(tail(t))),
                 body: ast_to_json(head(tail(tail(t))))
             }
         case "sequence":
@@ -198,7 +210,8 @@ const ast_to_json = (t) => {
                 tag: "fun",
                 sym: head(tail(head(tail(t)))),
                 type: head(tail(tail(head(tail(t))))),
-                prms: list_to_array(parameters(head(tail(tail(t))))),
+                prms: head(tail(tail(t))),
+                // prms: parameters([], head(tail(tail(t)))),
                 body: ast_to_json(head(tail(tail(tail(t)))))
             }
         case "return_statement":
@@ -528,13 +541,15 @@ const assign = (x, v) => {
     }
 }
 
-const extend = (xs, vs, e) => {
+const extend = (xs, vs) => {
     if (vs.length > xs.length) error('too many arguments')
     if (vs.length < xs.length) error('too few arguments')
     const new_frame = {}
-    for (let i = 0; i < xs.length; i++)
-        new_frame[xs[i]] = vs[i]
-    return pair(new_frame, e)
+    for (let i = 0; i < xs.length; i++) {
+        const obj = {type: xs[i].type, val: vs[i]}
+        dict_set(new_frame, xs[i], obj)
+    }
+    LS.push(new_frame)
 }
 
 // At the start of executing a block, local 
@@ -581,7 +596,10 @@ const remove_declarations = (val_arr, removal_indexes) => {
 // scanning out the declarations from (possibly nested)
 // sequences of statements, ignoring blocks
 const scan = comp => {
-    let sf = {}
+    let sf = {}; 
+    if (LS.length > 0) {
+        sf = LS.pop()
+    }
     let dec_arr = []
     if (comp.tag === 'seq') {
         let stmts = comp.stmts
@@ -605,7 +623,7 @@ const scan = comp => {
         }
         comp.stmts = remove_declarations(comp.stmts, dec_arr)
     }
-    return sf
+    LS.push(sf)
 }
 
 /* **********************
@@ -707,7 +725,7 @@ const microcode = {
             push(A, {tag: 'branch_i', cons: cmd.cons, alt: cmd.alt}, cmd.pred),
     app:
         cmd =>
-            push(A, {tag: 'app_i', arity: cmd.args.length},
+            push(RTS, {tag: 'app_i', arity: cmd.args.length},
                 ...cmd.args, // already in reverse order, see ast_to_json
                 cmd.fun),
     assmt:
@@ -743,9 +761,7 @@ const microcode = {
                 cmd.pred),
     blk:
         cmd => {
-            const locals = scan(cmd.body)
-
-            LS.push(locals)
+            scan(cmd.body)
             RTS.push(cmd.body)
 
             // const unassigneds = locals.map(_ => unassigned)
@@ -786,6 +802,19 @@ const microcode = {
     reset_i:
         cmd =>{
             LS.pop()
+            if (LS.length > 0) {
+                // return to correct elem
+            }
+
+            // return to main
+            let rtn_val = S.pop()
+            let obj = dict_get(SM, "main")
+
+            if (obj.type != get_type(rtn_val)) {
+                error("type mismatch with main")
+            }
+            obj.rtn = rtn_val
+            dict_set(SM, "main", rtn_val)
         },
             // RTS.pop().tag === 'mark_i'    // mark found?
             //     ? null                    // stop loop
@@ -815,7 +844,6 @@ const microcode = {
             S.pop(),
     app_i:
         cmd => {
-            console.log("IN APP_I")
             const arity = cmd.arity
             let args = []
             for (let i = arity - 1; i >= 0; i--)
@@ -826,14 +854,18 @@ const microcode = {
             // remaining case: sf.tag === 'closure'
             // closure:
             console.log("here")
-            if (RTS.length === 0 || peek(RTS).tag === 'env_i') {
+            if (RTS.length === 0 /**|| peek(RTS).tag === 'env_i' **/) {
                 // current E not needed:
                 // just push mark, and not env_i
-                push(RTS, {tag: 'mark_i'})
+                // console.log("in a")
+                // console.log(cmd)
+                // error("done")
+                // push(RTS, {tag: 'mark_i'})
             } else if (peek(RTS).tag === 'reset_i') {
                 // tail call:
                 // The callee's ret_i will push another reset_i
                 // which will go to the correct mark.
+                console.log("in b")
                 RTS.pop()
                 // The current E is not needed, because
                 // the following reset_i is the last body
@@ -841,10 +873,16 @@ const microcode = {
             } else {
                 // general case:
                 // push current environment
+                console.log("in c")
+
                 push(RTS, {tag: 'env_i', env: E}, {tag: 'mark_i'})
             }
             push(RTS, sf.body)
-            E = extend(sf.prms, args, sf.env)
+            // console.log(LS)
+            if (is_null(sf.prms)) {
+                sf.prms = []
+            }
+            extend(sf.prms, args)
         },
     branch_i:
         cmd =>
@@ -933,6 +971,8 @@ const process_global_dec = (decs) => {
     RTS = [decs]
     LS = []
     while (i < step_limit) {
+        console.log(LS)
+        console.log()
         if (RTS.length === 0) break
         const cmd = RTS.pop()
         if (microcode.hasOwnProperty(cmd.tag)) {
@@ -954,32 +994,32 @@ const execute = () => {
     SM = {}
     S = []
     RTS = []
-    LS = []
 
     const declarations = parse_to_json(CodeTokens)
     SM = process_global_dec(declarations)
+    LS = []
 
     // if no main func, error out
     if (!dict_has_key(SM, "main")) {
         error("main function not defined")
     }
-    LS = []
-    console.log("stash: ", S)
-    console.log("RTS: ", RTS)
 
-    console.log("local stack: ", LS)
-    console.log("static mem: ", SM)
+    // console.log("RTS: ", RTS)
+    // console.log("stack: ", S)
+    // console.log("local stack: ", LS)
+    // console.log("static mem: ", SM)
+    // error("done")
 
-    error("done")
+    const starting_pt = ["application", [["name", ["main", [dict_get(SM, "main").type, null]]], [dict_get(SM, "main").prms, null]]]
 
-    RTS.push(dict_get(SM, "main"))
+    RTS = [ast_to_json(starting_pt)]
 
     
     let i = 0
     while (i < step_limit) {
         if (RTS.length == 0) break
         const cmd = RTS.pop()
-        console.log(cmd)
+        console.log("executing command: ", cmd)
         console.log("stack: ", S)
         console.log("local stack: ", LS)
         display("", "RTS:")
