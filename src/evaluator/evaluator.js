@@ -197,6 +197,7 @@ const ast_to_json = (t) => {
             return {
                 tag: "fun",
                 sym: head(tail(head(tail(t)))),
+                type: head(tail(tail(head(tail(t))))),
                 prms: list_to_array(parameters(head(tail(tail(t))))),
                 body: ast_to_json(head(tail(tail(tail(t)))))
             }
@@ -228,21 +229,6 @@ const parse_to_json = tokens =>
     ({tag: "blk",
         body: ast_to_json(tokens)});
 
-
-const store_global_dec = tokens => {
-    let globalDecs = tokens.body.tag
-    if (globalDecs === "seq") {
-        let decs = tokens.body.stmts
-        for (var i in decs) {
-            dict_set(SM, decs[i].sym, decs[i])
-        }
-    }  else if (globalDecs === "fun") {
-        let body = tokens.body
-        dict_set(SM, body.sym, body)
-    } else {
-        error("Illegal Global Declaration")
-    }
-}
 
 /* *************************
  * values of the interpreter
@@ -288,20 +274,17 @@ const get_type = (x) => {
             ? "int"
             : is_double(x)
             ? "double"
+            : x.type != undefined
+            ? x.type
             : error("illegal type")
 }
 
 const get_info = key => {
-    LS.reverse()
-    for (var i in LS) {
-        let curr = LS[i]
-        if (dict_has_key(curr, key)) {
-            LS.reverse()
-            return dict_get(curr, key)
-        }
+    let curr = peek(LS)
+    if (dict_has_key(curr, key)) {
+        return dict_get(curr, key)
     }
-    LS.reverse()
-
+    
     if (dict_has_key(SM, key)) {
         return dict_get(SM, key)
     } 
@@ -501,22 +484,45 @@ const lookup = (key) => {
 }
 
 const assign = (x, v) => {
-    LS.reverse()
-    // search in all local and parent frames
-    for (var i in LS) {
-        let curr = LS[i]
-        if (dict_has_key(curr, x)) {
-            LS[i][x].val = v
-            LS.reverse()
-            return
-        }
-    }
-    LS.reverse()
+    if (LS.length > 0) {
+        let curr = LS.pop()
 
+        // search in local frame
+        if (dict_has_key(curr, x)) {
+            if (v.tag === "closure") {
+                let type = dict_get(curr, x).type
+                v.type = type
+                dict_set(curr, x, v)
+                push(LS, curr)
+                return
+            } else if (v.tag === undefined) {
+                let type = dict_get(curr, x).type
+                let obj = {val: v, type: type}
+                dict_set(curr, x, obj)
+                push(LS, curr)
+                return
+            } else {
+                console.log("??????????????????????????")
+            }
+        }
+        push(LS, curr)
+    }
+    
     // search in static memory
     if (dict_has_key(SM, x)) {
-        SM[i].expr = v
-        return
+        if (v.tag === "closure") {
+            let type = dict_get(SM, x).type
+            v.type = type
+            dict_set(SM, x, v)
+            return
+        } else if (v.tag === undefined) {
+            let type = dict_get(SM, x).type
+            let obj = {val: v, type: type}
+            dict_set(SM, x, obj)
+            return
+        } else {
+            console.log("??????????????????????????")
+        }
     } else {
         error(x, 'unbound name:')
     }
@@ -706,10 +712,13 @@ const microcode = {
                 cmd.fun),
     assmt:
         cmd =>
-            push(RTS, {tag: 'assmt_i', sym: cmd.sym}, cmd.expr),
+            push(RTS, {tag: 'assmt_i', sym: cmd.sym, type: cmd.type}, cmd.expr),
     lam:
         cmd =>
-            push(S, {tag: 'closure', prms: cmd.prms, body: cmd.body, env: E}),
+        {
+            push(S, {tag: 'closure', prms: cmd.prms, body: cmd.body})
+
+        },
     arr_acc:
         cmd =>
             push(A, {tag: 'arr_acc_i'}, cmd.ind, cmd.arr),
@@ -748,21 +757,22 @@ const microcode = {
         },
     let:
         cmd =>
-            push(RTS, {tag: 'lit', val: undefined},
+            push(RTS,
                 {tag: 'pop_i'},
                 {tag: 'assmt', sym: cmd.sym, expr: cmd.expr}),
     const:
         cmd =>
-            push(A, {tag: "lit", val: undefined},
+            push(RTS,
                 {tag: 'pop_i'},
-                {tag: 'assmt', sym: cmd.sym, expr: cmd.expr}),
+                {tag: 'assmt', sym: cmd.sym, type: cmd.type, expr: cmd.expr}),
     ret:
         cmd =>
             push(RTS, {tag: 'reset_i'}, cmd.expr),
     fun:
         cmd =>
-            push(A, {tag:  'const',
+            push(RTS, {tag:  'const',
                 sym:  cmd.sym,
+                type: cmd.type,
                 expr: {tag: 'lam', prms: cmd.prms, body: cmd.body}}),
     while:
         cmd =>
@@ -786,8 +796,12 @@ const microcode = {
     // the value remains on the stash
     // as the value of the assignment
         cmd => {
-            type_check(cmd.sym, peek(S))
-            assign(cmd.sym, S.pop())
+            let nxt = peek(S)
+            if (nxt.tag != "closure") {
+                type_check(cmd.sym, nxt)
+
+            }
+            assign(cmd.sym, nxt)
         },
             
     unop_i:
@@ -801,6 +815,7 @@ const microcode = {
             S.pop(),
     app_i:
         cmd => {
+            console.log("IN APP_I")
             const arity = cmd.arity
             let args = []
             for (let i = arity - 1; i >= 0; i--)
@@ -809,24 +824,26 @@ const microcode = {
             if (sf.tag === 'builtin')
                 return push(S, apply_builtin(sf.sym, args))
             // remaining case: sf.tag === 'closure'
-            if (A.length === 0 || peek(A).tag === 'env_i') {
+            // closure:
+            console.log("here")
+            if (RTS.length === 0 || peek(RTS).tag === 'env_i') {
                 // current E not needed:
                 // just push mark, and not env_i
-                push(A, {tag: 'mark_i'})
-            } else if (peek(A).tag === 'reset_i') {
+                push(RTS, {tag: 'mark_i'})
+            } else if (peek(RTS).tag === 'reset_i') {
                 // tail call:
                 // The callee's ret_i will push another reset_i
                 // which will go to the correct mark.
-                A.pop()
+                RTS.pop()
                 // The current E is not needed, because
                 // the following reset_i is the last body
                 // instruction to be executed.
             } else {
                 // general case:
                 // push current environment
-                push(A, {tag: 'env_i', env: E}, {tag: 'mark_i'})
+                push(RTS, {tag: 'env_i', env: E}, {tag: 'mark_i'})
             }
-            push(A, sf.body)
+            push(RTS, sf.body)
             E = extend(sf.prms, args, sf.env)
         },
     branch_i:
@@ -884,6 +901,55 @@ const microcode = {
 
 const step_limit = 1000000
 
+function init_global_dec(g_dec) {
+    let sf = {}
+    let dec_arr = []
+    if (g_dec.body.tag === 'seq') {
+        let stmts = g_dec.body.stmts
+        for (var i in stmts) {
+            if (stmts[i].tag === 'let' || stmts[i].tag === 'fun') {
+                if (dict_has_key(sf, stmts[i].sym)) {
+                    error("Multi declaration of same name not allowed.")
+                }
+                dict_set(sf, stmts[i].sym, {val: "unassigned", type: stmts[i].type})
+                if (is_null(stmts[i].expr)) { // remove variable declaration
+                    dec_arr.push(i)
+                }
+            }
+        }
+        remove_declarations(g_dec.stmts, dec_arr)
+    } else if (g_dec.tag === 'let' || g_dec.tag === 'fun') {
+        dict_set(sf, g_dec.sym, {val: "unassigned", type: stmts[i].type})
+        if (is_null(stmts[i].expr)) { // remove variable declaration
+            dec_arr.push(i)
+        }
+        remove_declarations(g_dec, dec_arr)
+    }
+    return sf
+}
+
+const process_global_dec = (decs) => {
+    let i = 0
+    RTS = [decs]
+    LS = []
+    while (i < step_limit) {
+        if (RTS.length === 0) break
+        const cmd = RTS.pop()
+        if (microcode.hasOwnProperty(cmd.tag)) {
+            microcode[cmd.tag](cmd)
+            //debug(cmd)
+        } else {
+            error("", "unknown command: " + 
+                      command_to_string(cmd))
+        }
+        i++
+    }
+    if (i === step_limit) {
+        error("step limit " + stringify(step_limit) + " exceeded")
+    }
+    return LS[0]
+}
+
 const execute = () => {
     SM = {}
     S = []
@@ -891,22 +957,36 @@ const execute = () => {
     LS = []
 
     const declarations = parse_to_json(CodeTokens)
-    store_global_dec(declarations)
+    SM = process_global_dec(declarations)
 
     // if no main func, error out
     if (!dict_has_key(SM, "main")) {
         error("main function not defined")
     }
+    LS = []
+    console.log("stash: ", S)
+    console.log("RTS: ", RTS)
 
-    RTS.push(dict_get(SM, "main").body)
+    console.log("local stack: ", LS)
+    console.log("static mem: ", SM)
+
+    error("done")
+
+    RTS.push(dict_get(SM, "main"))
+
+    
     let i = 0
     while (i < step_limit) {
         if (RTS.length == 0) break
         const cmd = RTS.pop()
         console.log(cmd)
-        console.log()
         console.log("stack: ", S)
         console.log("local stack: ", LS)
+        display("", "RTS:")
+        for (let cmd of RTS)
+            display('', command_to_string(cmd))
+        console.log()
+
         if (microcode.hasOwnProperty(cmd.tag)) {
             microcode[cmd.tag](cmd)
             //debug(cmd)
@@ -921,6 +1001,7 @@ const execute = () => {
     console.log("RTS: ", RTS)
     console.log("stack: ", S)
     console.log("local stack: ", LS)
+    console.log("static mem: ", SM)
 }
 
 
