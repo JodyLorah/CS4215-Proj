@@ -3,7 +3,7 @@ int i = 0;
 int y = 3+2;
 
 int main(){
-    int c = f(1,2,3);
+    int c = f(0.1,2,3);
     int fun = f1();
     return 2;
 }

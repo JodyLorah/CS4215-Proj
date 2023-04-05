@@ -114,8 +114,12 @@ class Visitor extends CVisitor {
         }
         if (isType(ctx.compoundStatement().blockItemList())) {
             let funcBody = [this.visitBlockItemList(ctx.compoundStatement().blockItemList()), null];
-            if (ctx.compoundStatement().blockItemList().blockItem_list().length > 1) {
-                funcBody = [["block", funcBody], null];
+            let lst = ctx.compoundStatement().blockItemList().blockItem_list();
+            for (var i in lst) {
+                if (lst[i].declaration()) {
+                    funcBody = [["block", funcBody], null];
+                    break;
+                }
             }
             return ["function_declaration", [name, [funcParams, funcBody]]];
         }
@@ -306,9 +310,26 @@ class Visitor extends CVisitor {
     }
     // @ts-ignore
     visitPostfixExpression(ctx) {
-        if (isType(ctx.primaryExpression())) {
-            return ctx.primaryExpression().accept(this);
+        let priExp = ctx.primaryExpression().accept(this);
+        let args = null;
+        if (isType(ctx.LeftParen())) {
+            let lst = ctx.argumentExpressionList();
+            if (isType(lst)) { //argument expression list present
+                args = this.visitArgumentExpressionList(ctx.argumentExpressionList());
+            }
+            priExp = ["application", [priExp, [args, null]]];
         }
+        return priExp;
+    }
+    // @ts-ignore
+    visitArgumentExpressionList(ctx) {
+        let lst = ctx.assignmentExpression_list();
+        lst = lst.reverse();
+        let rtn = null;
+        for (var i in lst) {
+            rtn = [this.visitAssignmentExpression(lst[i]), rtn];
+        }
+        return rtn;
     }
     // @ts-ignore
     visitPrimaryExpression(ctx) {

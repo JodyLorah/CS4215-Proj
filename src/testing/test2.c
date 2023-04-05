@@ -1,4 +1,5 @@
-// shows type checking for params
+// shows able to return declared stuff in function
+
 int i = 0;
 int y = 3+2;
 
@@ -14,5 +15,5 @@ int f(int x, int y, int z) {
 }
 
 int f1() {
-    return 1.2;
+    return i;
 }

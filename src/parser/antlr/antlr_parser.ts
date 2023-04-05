@@ -10,7 +10,9 @@ import * as fs from 'fs';
 import {CharStream, CommonTokenStream} from 'antlr4';
 import CVisitor from './antlr_gen/CVisitor.js';
 import CLexer from "./antlr_gen/CLexer.js"; // Had to add .js - This is a hack
-import CParser, {AdditiveExpressionContext, AssignmentExpressionContext, BlockItemContext, BlockItemListContext, CompilationUnitContext, DeclarationContext, DirectDeclaratorContext, ExpressionStatementContext, FunctionDefinitionContext, InitializerContext, MultiplicativeExpressionContext, ParameterDeclarationContext, ParameterListContext, PostfixExpressionContext, TranslationUnitContext, TypeSpecifierContext} from "./antlr_gen/CParser.js";
+import CParser, {AdditiveExpressionContext, ArgumentExpressionListContext, AssignmentExpressionContext, BlockItemContext, BlockItemListContext, CompilationUnitContext, DeclarationContext, DirectDeclaratorContext, ExpressionStatementContext, FunctionDefinitionContext, InitializerContext, MultiplicativeExpressionContext, ParameterDeclarationContext, ParameterListContext, PostfixExpressionContext, TranslationUnitContext, TypeSpecifierContext} from "./antlr_gen/CParser.js";
+import { assert } from 'console';
+import { exit } from 'process';
 
 function isType(x: any): boolean {
     return x !== null;
@@ -120,9 +122,14 @@ class Visitor extends CVisitor<Array<object>> {
         if (isType(ctx.compoundStatement().blockItemList())) {
             let funcBody = [this.visitBlockItemList(ctx.compoundStatement().blockItemList()), null]
 
-            if (ctx.compoundStatement().blockItemList().blockItem_list().length > 1) {
-                funcBody = [["block", funcBody], null]
-            } 
+            let lst = ctx.compoundStatement().blockItemList().blockItem_list()
+            for (var i in lst) {
+                if (lst[i].declaration()) {
+                    funcBody = [["block", funcBody], null]
+                    break
+                } 
+            }
+            
             return ["function_declaration", [name, [funcParams, funcBody]]]
             
         }
@@ -338,9 +345,30 @@ class Visitor extends CVisitor<Array<object>> {
     
     // @ts-ignore
     visitPostfixExpression(ctx: PostfixExpressionContext) {
-        if (isType(ctx.primaryExpression())) {
-            return ctx.primaryExpression().accept(this);
+        let priExp = ctx.primaryExpression().accept(this);
+        let args = null
+        if (isType(ctx.LeftParen())) {
+            let lst = ctx.argumentExpressionList()
+            if (isType(lst)) { //argument expression list present
+                args = this.visitArgumentExpressionList(ctx.argumentExpressionList())
+            }
+
+            priExp = ["application", [priExp, [args, null]]]
+
+        } 
+        return priExp
+    }
+
+    // @ts-ignore
+    visitArgumentExpressionList(ctx: ArgumentExpressionListContext) {
+        let lst = ctx.assignmentExpression_list()
+        lst = lst.reverse()
+
+        let rtn = null
+        for (var i in lst) {
+            rtn = [this.visitAssignmentExpression(lst[i]), rtn]
         }
+        return rtn
     }
     
     // @ts-ignore

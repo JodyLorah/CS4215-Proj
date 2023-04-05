@@ -14,6 +14,9 @@ var CodeTokens = require('../parser/antlr/antlr_tokens.json');
  * dictionary functions
  * *************/
 const dict_has_key = (d, val) => {
+    if (d.length === 0) {
+        return false
+    }
     return d[val] != undefined ? true : false
 }
 
@@ -50,12 +53,17 @@ const list_to_array = xs =>
         : [head(xs)].concat(list_to_array(tail(xs)))
 
 const make_param_obj = xs => {
+    if (head(xs) != 'name') {
+        return ast_to_json(xs)
+    }
+
+    // for func dec
     return {sym: head(tail(xs)), type: head(tail(tail(xs)))}
 }
 
 // simplify parameter format
 const parameters = (rtn, xs) => {
-    if (is_null(xs)) {
+    if (is_null(xs) || xs.length == 0) {
         return rtn
     }
     let obj = make_param_obj(head(xs))
@@ -74,8 +82,13 @@ const ast_to_json = (t) => {
     switch (head(t)) {
         case "literal":
             return { tag: "lit", val: head(tail(t)) }
-        case "name":
-            return { tag: "nam", sym: head(tail(t)), type: head(tail(tail(t))) }
+        case "name": {
+            let type = tail(tail(t))
+            if (!is_null(type)) {
+                type = head(type)
+            }
+            return { tag: "nam", sym: head(tail(t)), type: type }
+        }
         case "application":
             return {
                 tag: "app",
@@ -144,14 +157,20 @@ const ast_to_json = (t) => {
             return {
                 tag: "lam",
                 prms: head(tail(t)),
-                // prms: parameters([], head(tail(t))),
+                prms: parameters([], head(tail(t))),
                 body: ast_to_json(head(tail(tail(t))))
             }
-        case "sequence":
+        case "sequence": {
+            // printNestedArray(t)
+            console.log()
+            console.log()
+            printNestedArray(head(tail(t)))
             return {
                 tag: "seq",
                 stmts: list_to_array(map(ast_to_json, head(tail(t))))
             }
+        }
+            
         case "block":
             return {
                 tag: "blk",
@@ -210,8 +229,8 @@ const ast_to_json = (t) => {
                 tag: "fun",
                 sym: head(tail(head(tail(t)))),
                 type: head(tail(tail(head(tail(t))))),
-                prms: head(tail(tail(t))),
-                // prms: parameters([], head(tail(tail(t)))),
+                // prms: head(tail(tail(t))),
+                prms: parameters([], head(tail(tail(t)))),
                 body: ast_to_json(head(tail(tail(tail(t)))))
             }
         case "return_statement":
@@ -476,6 +495,10 @@ global_frame.math_SQRT2   = math_SQRT2
 const empty_environment = null
 const global_environment = pair(global_frame, empty_environment)
 
+const is_literal = x => {
+    return (x.type === "int" || x.type === "double" || x.type === "char") ? true : false
+}
+
 const lookup = (key) => {
     LS.reverse()
     // search in all local and parent frames
@@ -483,7 +506,11 @@ const lookup = (key) => {
         let curr = LS[i]
         if (dict_has_key(curr, key)) {
             LS.reverse()
-            return dict_get(curr, key)
+            let obj = dict_get(curr, key)
+            if (is_literal(obj)) {
+                return obj.val
+            }
+            return obj
         }
     }
     LS.reverse()
@@ -509,11 +536,17 @@ const assign = (x, v) => {
                 push(LS, curr)
                 return
             } else if (v.tag === undefined) {
-                let type = dict_get(curr, x).type
-                let obj = {val: v, type: type}
-                dict_set(curr, x, obj)
-                push(LS, curr)
-                return
+                if (v.type === undefined) {
+                    let type = dict_get(curr, x).type
+                    let obj = {val: v, type: type}
+                    dict_set(curr, x, obj)
+                    push(LS, curr)
+                    return
+                } else {
+                    dict_set(curr, x, v)
+                    push(LS, curr)
+                    return 
+                }
             } else {
                 console.log("??????????????????????????")
             }
@@ -523,16 +556,22 @@ const assign = (x, v) => {
     
     // search in static memory
     if (dict_has_key(SM, x)) {
+        console.log("assigning i ", v)
         if (v.tag === "closure") {
             let type = dict_get(SM, x).type
             v.type = type
             dict_set(SM, x, v)
             return
         } else if (v.tag === undefined) {
-            let type = dict_get(SM, x).type
-            let obj = {val: v, type: type}
-            dict_set(SM, x, obj)
-            return
+            if (v.type === undefined) { // literal assignments, to preserve type
+                let type = dict_get(SM, x).type
+                let obj = {val: v, type: type}
+                dict_set(SM, x, obj)
+                return
+            } else {
+                dict_set(SM, x, v)
+                return 
+            }
         } else {
             console.log("??????????????????????????")
         }
@@ -542,14 +581,20 @@ const assign = (x, v) => {
 }
 
 const extend = (xs, vs) => {
+    console.log("extending params")
+    console.log(xs)
+    console.log(vs)
     if (vs.length > xs.length) error('too many arguments')
     if (vs.length < xs.length) error('too few arguments')
     const new_frame = {}
     for (let i = 0; i < xs.length; i++) {
-        const obj = {type: xs[i].type, val: vs[i]}
-        dict_set(new_frame, xs[i], obj)
+        if (xs[i].type != get_type(vs[i])) {
+            error("type mismatch for parameters!")
+        }
+        const obj = {val: vs[i], type: xs[i].type}
+        dict_set(new_frame, xs[i].sym, obj)
     }
-    LS.push(new_frame)
+    push(LS, new_frame)
 }
 
 // At the start of executing a block, local 
@@ -582,6 +627,7 @@ const handle_sequence = seq => {
             : result.push({tag: 'pop_i'})
         result.push(cmd)
     }
+    
     return result.reverse()
 }
 
@@ -802,19 +848,19 @@ const microcode = {
     reset_i:
         cmd =>{
             LS.pop()
-            if (LS.length > 0) {
-                // return to correct elem
+            if (LS.length === 0) {
+                let rtn_val = S.pop()
+                let obj = dict_get(SM, "main")
+
+                if (obj.type != get_type(rtn_val)) {
+                    error("type mismatch with main")
+                }
+                obj.rtn = rtn_val
+                dict_set(SM, "main", rtn_val)
             }
 
             // return to main
-            let rtn_val = S.pop()
-            let obj = dict_get(SM, "main")
-
-            if (obj.type != get_type(rtn_val)) {
-                error("type mismatch with main")
-            }
-            obj.rtn = rtn_val
-            dict_set(SM, "main", rtn_val)
+            
         },
             // RTS.pop().tag === 'mark_i'    // mark found?
             //     ? null                    // stop loop
@@ -826,13 +872,25 @@ const microcode = {
     // as the value of the assignment
         cmd => {
             let nxt = peek(S)
-            if (nxt.tag != "closure") {
-                type_check(cmd.sym, nxt)
+            if (nxt.tag == "closure" && dict_has_key(SM, "main")) {
+                // run function
+                S.pop()
+                const arity = nxt.prms
+                // push(RTS, {tag: 'assmt_i', sym: cmd.sym, type: cmd.type}, {tag: 'app', fun: {}})
+                console.log(nxt)
+                console.log("SM: ", SM)
 
+                console.log("DONEEEEEE")
+            } else {
+                if (nxt.tag != "closure") {
+                    type_check(cmd.sym, nxt)
+                }
             }
-            assign(cmd.sym, nxt)
-        },
+
+            assign(cmd.sym, peek(S)) // S may have changed due to closure
+
             
+        },
     unop_i:
         cmd =>
             push(S, apply_unop(cmd.sym, S.pop())),
@@ -875,7 +933,7 @@ const microcode = {
                 // push current environment
                 console.log("in c")
 
-                push(RTS, {tag: 'env_i', env: E}, {tag: 'mark_i'})
+                // push(RTS, {tag: 'env_i', env: E}, {tag: 'mark_i'})
             }
             push(RTS, sf.body)
             // console.log(LS)
@@ -971,8 +1029,6 @@ const process_global_dec = (decs) => {
     RTS = [decs]
     LS = []
     while (i < step_limit) {
-        console.log(LS)
-        console.log()
         if (RTS.length === 0) break
         const cmd = RTS.pop()
         if (microcode.hasOwnProperty(cmd.tag)) {
@@ -1003,7 +1059,7 @@ const execute = () => {
     if (!dict_has_key(SM, "main")) {
         error("main function not defined")
     }
-
+    console.log("done with global")
     // console.log("RTS: ", RTS)
     // console.log("stack: ", S)
     // console.log("local stack: ", LS)
@@ -1025,7 +1081,9 @@ const execute = () => {
         display("", "RTS:")
         for (let cmd of RTS)
             display('', command_to_string(cmd))
+        console.log("new local stack: ", LS)
         console.log()
+
 
         if (microcode.hasOwnProperty(cmd.tag)) {
             microcode[cmd.tag](cmd)

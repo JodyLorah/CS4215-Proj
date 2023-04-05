@@ -1,4 +1,5 @@
-// shows type checking for params
+// shows change to global var and inter function calls
+
 int i = 0;
 int y = 3+2;
 
@@ -10,9 +11,9 @@ int main(){
 
 int f(int x, int y, int z) {
     i = z;
-    return x;
+    return 2;
 }
 
 int f1() {
-    return 1.2;
+    return 5;
 }

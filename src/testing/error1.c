@@ -1,4 +1,4 @@
-// shows type checking for params
+// shows type checking for return
 int i = 0;
 int y = 3+2;
 
