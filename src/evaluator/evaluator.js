@@ -313,8 +313,11 @@ const get_type = (x) => {
 
 const get_info = key => {
     let curr = peek(LS)
+    console.log("curr: ",curr)
     if (dict_has_key(curr, key)) {
-        return dict_get(curr, key)
+        let rtn = dict_get(curr, key)
+        console.log("found key: ", rtn)
+        return rtn
     }
     
     if (dict_has_key(SM, key)) {
@@ -335,6 +338,8 @@ const type_check = (x, y) => {
             return
         }
     } else {
+        console.log("x is: ", x)
+
         let info_x = get_info(x)
         if (info_x.type === get_type(y)) {
             return
@@ -582,8 +587,8 @@ const assign = (x, v) => {
 
 const extend = (xs, vs) => {
     console.log("extending params")
-    console.log(xs)
-    console.log(vs)
+    // console.log(xs)
+    // console.log(vs)
     if (vs.length > xs.length) error('too many arguments')
     if (vs.length < xs.length) error('too few arguments')
     const new_frame = {}
@@ -883,6 +888,7 @@ const microcode = {
                 console.log("DONEEEEEE")
             } else {
                 if (nxt.tag != "closure") {
+                    console.log("cmd is ", cmd)
                     type_check(cmd.sym, nxt)
                 }
             }
@@ -924,7 +930,7 @@ const microcode = {
                 // The callee's ret_i will push another reset_i
                 // which will go to the correct mark.
                 console.log("in b")
-                RTS.pop()
+                // RTS.pop()
                 // The current E is not needed, because
                 // the following reset_i is the last body
                 // instruction to be executed.
@@ -1078,16 +1084,18 @@ const execute = () => {
         console.log("executing command: ", cmd)
         console.log("stack: ", S)
         console.log("local stack: ", LS)
-        display("", "RTS:")
-        for (let cmd of RTS)
-            display('', command_to_string(cmd))
-        console.log("new local stack: ", LS)
-        console.log()
+        
+        // console.log("new local stack: ", LS)
 
 
         if (microcode.hasOwnProperty(cmd.tag)) {
             microcode[cmd.tag](cmd)
             //debug(cmd)
+            display("", "RTS:")
+            for (let cmd of RTS)
+                display('', command_to_string(cmd))
+            console.log()
+
         } else {
             error("", "unknown command: " +
                 command_to_string(cmd))
