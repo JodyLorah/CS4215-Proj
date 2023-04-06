@@ -120,11 +120,12 @@ const ast_to_json = (t) => {
                     expr: ast_to_json(head(tail(t)))
                 }
             } else {
-                return {
+                let obj = {
                     tag: "arr_acc",
                     arr: ast_to_json(head(tail(t))),
                     ind: ast_to_json(head(tail(tail(t))))
                 }
+                return obj
             }
         }
         case "object_access":
@@ -140,13 +141,38 @@ const ast_to_json = (t) => {
                 ind: ast_to_json(head(tail(tail(head(tail(t)))))),
                 expr: ast_to_json(head(tail(tail(t))))
             }
-        case "array_expression":
+        case "array_expression": {
+            let size = head(tail(tail(t)))
+            let items = head(tail(t))
+            let is_empty_items = true;
+
+            if (!is_null(size)) {
+                size = head(tail(size))
+            }
+
+            // if there are items, add as elem
+            // else, init empty obj and allocate to elems  
+            if (!is_null(items)) {
+                is_empty_items = false
+                items = parameters([], head(tail(t)))
+            } else {
+                items = new Array(size)
+            }
+
+            // if there are items && size declared, check if they tally
+            if (!is_null(size) && !is_empty_items) {
+                if (items.length != size) {
+                    error("array does not match declared size")
+                }
+            }
+
             return {
                 tag: "arr_lit",
-                elems: list_to_array(map(ast_to_json, head(tail(t))))
-                    .reverse()  // microcode for arr_lit expects
-                                // expressions in reverse order
+                elems: items
             }
+            
+        }
+            
         case "unary_operator_combination":
             return {
                 tag: "unop",
@@ -161,10 +187,6 @@ const ast_to_json = (t) => {
                 body: ast_to_json(head(tail(tail(t))))
             }
         case "sequence": {
-            // printNestedArray(t)
-            console.log()
-            console.log()
-            printNestedArray(head(tail(t)))
             return {
                 tag: "seq",
                 stmts: list_to_array(map(ast_to_json, head(tail(t))))
@@ -178,10 +200,11 @@ const ast_to_json = (t) => {
             }
         case "variable_declaration":
             let exp = head(tail(tail(t)))
+
             // handle cases like int a;
             if (!is_null(exp)) {
                 exp = ast_to_json(head(tail(tail(t))))
-            }
+            } 
             return {
                 tag: "let",
                 sym: head(tail(head(tail(t)))),
@@ -194,12 +217,18 @@ const ast_to_json = (t) => {
                 sym: head(tail(head(tail(t)))),
                 expr: ast_to_json(head(tail(tail(t))))
             }
-        case "assignment":
+        case "assignment": {
+            // TO REPLACE   
+            sym = head(tail(head(tail(t))))
+            if (head(sym) === "name") {
+                sym = ast_to_json(sym)
+                sym = sym.sym
+            }
             return {
                 tag: "assmt",
-                sym: head(tail(head(tail(t)))),
+                sym: sym,
                 expr: ast_to_json(head(tail(tail(t))))
-            }
+            }}
         case "conditional_statement":
             return {
                 tag: "cond_stmt",
@@ -300,7 +329,9 @@ function is_double(n){
 }
 
 const get_type = (x) => {
-    return typeof(x) === "string"
+    return x.tag === "lit"  
+            ? get_type(x.val)
+            : typeof(x) === "string"
             ? "string"
             : is_int(x) 
             ? "int"
@@ -308,7 +339,7 @@ const get_type = (x) => {
             ? "double"
             : x.type != undefined
             ? x.type
-            : error("illegal type")
+            : "undefined"
 }
 
 const get_info = key => {
@@ -316,7 +347,6 @@ const get_info = key => {
     console.log("curr: ",curr)
     if (dict_has_key(curr, key)) {
         let rtn = dict_get(curr, key)
-        console.log("found key: ", rtn)
         return rtn
     }
     
@@ -338,12 +368,34 @@ const type_check = (x, y) => {
             return
         }
     } else {
-        console.log("x is: ", x)
-
         let info_x = get_info(x)
-        if (info_x.type === get_type(y)) {
+        let info_y = get_info(y)
+        console.log("info x: ", info_x)
+        console.log("info y: ", info_y)
+
+        if (is_null(info_x)) {
+            info_x = x
+            console.log("x is: ", x)
+        }
+
+        if (is_null(info_y)) {
+            info_y = y
+            console.log("y is: ", y)
+        }
+
+        if (info_y.tag === "arr_lit") {
+            let lst = info_y.elems
+            for (var i in lst) {
+                if (info_x.type != get_type(lst[i].val) ) {
+                    error("array obj declared is of different type")
+                }
+            }
             return
         }
+        console.log("type is: ", (info_y) )
+        if (info_x.type === get_type(info_y)) {
+            return
+        } 
     }
     error("type mismatch")
 }
@@ -515,6 +567,7 @@ const lookup = (key) => {
             if (is_literal(obj)) {
                 return obj.val
             }
+            console.log("obj is: ", obj)
             return obj
         }
     }
@@ -522,6 +575,7 @@ const lookup = (key) => {
 
     // search in static memory
     if (dict_has_key(SM, key)) {
+        console.log("returning: ", dict_get(SM, key))
         return dict_get(SM, key)
     } else {
         error(x, 'unbound name:')
@@ -552,7 +606,20 @@ const assign = (x, v) => {
                     push(LS, curr)
                     return 
                 }
+            } else if (v.tag === "arr_lit") {
+                let obj = {val: v, type: dict_get(curr, x).type}
+                dict_set(curr, x, obj)
+                push(LS, curr)
+                // console.log("LS is: ", LS)
+                return
+            
+            }  else if (v.tag === "lit") { // assigning aft array retrieval
+                push(LS, curr)
+                assign(x, v.val)
+                return
             } else {
+                console.log("x is: ", x)
+                console.log("v is: ", v)
                 console.log("??????????????????????????")
             }
         }
@@ -753,7 +820,7 @@ const microcode = {
             push(S, cmd.val),
     nam:
         cmd =>
-            push(S, lookup(cmd.sym, LS)),
+            push(S, lookup(cmd.sym)),
     unop:
         cmd =>
             push(RTS, {tag: 'unop_i', sym: cmd.sym}, cmd.frst),
@@ -790,16 +857,16 @@ const microcode = {
         },
     arr_acc:
         cmd =>
-            push(A, {tag: 'arr_acc_i'}, cmd.ind, cmd.arr),
+            push(RTS, {tag: 'arr_acc_i'}, cmd.ind, cmd.arr),
     arr_assmt:
         cmd =>
-            push(A, {'tag': 'arr_assmt_i'}, cmd.expr, cmd.ind, cmd.arr),
+            push(RTS, {'tag': 'arr_assmt_i'}, cmd.expr, cmd.ind, cmd.arr),
     arr_len:
         cmd =>
             push(A, {tag: 'arr_len_i'}, cmd.expr),
     arr_lit:
         cmd =>
-            push(S, cmd.elems),
+            push(S, {tag: cmd.tag, elems: cmd.elems}),
 
 //
 // statements
@@ -887,8 +954,12 @@ const microcode = {
 
                 console.log("DONEEEEEE")
             } else {
+                // if ()
                 if (nxt.tag != "closure") {
-                    console.log("cmd is ", cmd)
+                    // console.log("cmd is ", cmd)
+                    // console.log("in assmt_i")
+                    // console.log("cmd: ", cmd)
+                    // console.log("nxt: ", nxt)
                     type_check(cmd.sym, nxt)
                 }
             }
@@ -965,7 +1036,11 @@ const microcode = {
     arr_acc_i:
         cmd => {
             const ind = S.pop()
-            const arr = S.pop()
+            const arr_obj = S.pop()
+            const arr = arr_obj.val.elems
+            if (ind >= arr.length || ind < 0) {
+                error("array access out of bounds")
+            }
             push(S, arr[ind])
         },
     arr_assmt_i:
@@ -1040,6 +1115,13 @@ const process_global_dec = (decs) => {
         if (microcode.hasOwnProperty(cmd.tag)) {
             microcode[cmd.tag](cmd)
             //debug(cmd)
+            console.log("command is: ", cmd)
+            console.log("LS is: ", LS)
+            // display("", "RTS:")
+            // for (let cmd of RTS)
+            //     display('', command_to_string(cmd))
+            
+            console.log()
         } else {
             error("", "unknown command: " + 
                       command_to_string(cmd))
@@ -1070,7 +1152,6 @@ const execute = () => {
     // console.log("stack: ", S)
     // console.log("local stack: ", LS)
     // console.log("static mem: ", SM)
-    // error("done")
 
     const starting_pt = ["application", [["name", ["main", [dict_get(SM, "main").type, null]]], [dict_get(SM, "main").prms, null]]]
 

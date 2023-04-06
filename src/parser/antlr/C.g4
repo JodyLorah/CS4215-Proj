@@ -38,7 +38,7 @@
         ;
 
     postfixExpression
-        : primaryExpression ('(' argumentExpressionList? ')')? 
+        : primaryExpression ('(' argumentExpressionList? ')' | '[' assignmentExpression ']')? 
         //('[' assignmentExpression ']' /* TO REVIEW */
         //| '(' argumentExpressionList? ')'/* TO REVIEW */
         //| ('++' | '--') /* TO REVIEW */

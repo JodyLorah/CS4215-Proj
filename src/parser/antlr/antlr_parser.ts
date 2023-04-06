@@ -1,11 +1,3 @@
-/**
- * Antlr Parser
- *
- * Created for CS4215 term project
- *
- * By Ciaran Gruber and Jody Tang
- */
-
 import * as fs from 'fs';
 import {CharStream, CommonTokenStream} from 'antlr4';
 import CVisitor from './antlr_gen/CVisitor.js';
@@ -191,11 +183,27 @@ class Visitor extends CVisitor<Array<object>> {
     visitDeclaration(ctx: DeclarationContext) {
         const type = ctx.typeSpecifier()
         const initDec = ctx.initDeclarator()
-        let name = this.visitDirectDeclarator(initDec.directDeclarator());
+        const dirDec = initDec.directDeclarator()
+        let name = this.visitDirectDeclarator(dirDec);
         let dd = ["name", [name, [stringifyType(type), null]]]
         let rtn = ["variable_declaration", [dd, [null, null]]]
 
-        if (isType(initDec.Assign())) {
+        if (isType(dirDec.LeftBracket())) { // array declaration
+            let size = null
+            let items = null
+            if (isType(dirDec.assignmentExpression())) {
+                size = this.visitAssignmentExpression(dirDec.assignmentExpression())
+            }
+            if (isType(initDec.initializer())) {
+                let lst = initDec.initializer().initializerList().initializer_list()
+                lst.reverse()
+
+                for (var i in lst) {
+                    items = [this.visitInitializer(lst[i]), items]
+                }
+            }
+            rtn = ["variable_declaration", [dd, [["array_expression",[items, [size, null]]], null]]]
+        } else if (isType(initDec.Assign())) {
             let rhs = initDec.initializer().accept(this);
             rtn = ["variable_declaration", [dd, [rhs, null]]]
         }
@@ -347,15 +355,20 @@ class Visitor extends CVisitor<Array<object>> {
     visitPostfixExpression(ctx: PostfixExpressionContext) {
         let priExp = ctx.primaryExpression().accept(this);
         let args = null
+
         if (isType(ctx.LeftParen())) {
             let lst = ctx.argumentExpressionList()
             if (isType(lst)) { //argument expression list present
-                args = this.visitArgumentExpressionList(ctx.argumentExpressionList())
+                args = this.visitArgumentExpressionList(lst)
             }
 
             priExp = ["application", [priExp, [args, null]]]
 
-        } 
+        } else if (isType(ctx.LeftBracket())) {
+            // array exp
+            args = this.visitAssignmentExpression(ctx.assignmentExpression())
+            priExp = ["object_access", [priExp, [args, null]]]
+        }
         return priExp
     }
 
