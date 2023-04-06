@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import {CharStream, CommonTokenStream} from 'antlr4';
 import CVisitor from './antlr_gen/CVisitor.js';
 import CLexer from "./antlr_gen/CLexer.js"; // Had to add .js - This is a hack
-import CParser, {AdditiveExpressionContext, ArgumentExpressionListContext, AssignmentExpressionContext, BlockItemContext, BlockItemListContext, CompilationUnitContext, DeclarationContext, DirectDeclaratorContext, ExpressionStatementContext, FunctionDefinitionContext, InitializerContext, MultiplicativeExpressionContext, ParameterDeclarationContext, ParameterListContext, PostfixExpressionContext, TranslationUnitContext, TypeSpecifierContext} from "./antlr_gen/CParser.js";
+import CParser, {AdditiveExpressionContext, ArgumentExpressionListContext, AssignmentExpressionContext, BlockItemContext, BlockItemListContext, CompilationUnitContext, CompoundStatementContext, DeclarationContext, DirectDeclaratorContext, ExpressionStatementContext, FunctionDefinitionContext, InitializerContext, IterationStatementContext, MultiplicativeExpressionContext, ParameterDeclarationContext, ParameterListContext, PostfixExpressionContext, RelationalExpressionContext, TranslationUnitContext, TypeSpecifierContext} from "./antlr_gen/CParser.js";
 import { assert } from 'console';
 import { exit } from 'process';
 
@@ -24,7 +24,8 @@ function stringifyType(x: TypeSpecifierContext): string {
 
 function getSymbol(x: AdditiveExpressionContext): string;
 function getSymbol(x: MultiplicativeExpressionContext): string;
-function getSymbol(x: AdditiveExpressionContext | MultiplicativeExpressionContext): string {
+function getSymbol(x: RelationalExpressionContext): string;
+function getSymbol(x: AdditiveExpressionContext | MultiplicativeExpressionContext | RelationalExpressionContext): string {
     if (x instanceof AdditiveExpressionContext) {
         if (isType(x.Plus())) {
             return "+";
@@ -40,6 +41,18 @@ function getSymbol(x: AdditiveExpressionContext | MultiplicativeExpressionContex
             return "/";
         } else if (isType(x.Mod())) {
             return "%";
+        } else {
+            throw new Error("type not allowed");
+        }
+    } else if (x instanceof RelationalExpressionContext) {
+        if (isType(x.Less())) {
+            return "<";
+        } else if (isType(x.Greater())) {
+            return ">";
+        } else if (isType(x.LessEqual())) {
+            return "<=";
+        } else if (isType(x.GreaterEqual())) {
+            return ">="
         } else {
             throw new Error("type not allowed");
         }
@@ -163,9 +176,25 @@ class Visitor extends CVisitor<Array<object>> {
             return ctx.jumpStatement().accept(this)
         } else if (isType(ctx.expressionStatement())) {
             return ctx.expressionStatement().accept(this)
+        } else if (isType(ctx.iterationStatement())) {
+            return ctx.iterationStatement().accept(this)
         } else {
             // TODO: iteration, selection statement
         }
+    }
+
+    // @ts-ignore
+    visitCompoundStatement(ctx: CompoundStatementContext) {
+        return ctx.blockItemList().accept(this)
+
+    }
+
+    // @ts-ignore
+    visitIterationStatement(ctx: IterationStatementContext) {
+        let assExpr = ctx.assignmentExpression().accept(this)
+        let stmt = ctx.statement().accept(this)
+        console.log(stmt)
+        return ["while_loop", [assExpr, [stmt, null]]]
     }
 
     // @ts-ignore
@@ -286,8 +315,23 @@ class Visitor extends CVisitor<Array<object>> {
     
     // @ts-ignore
     visitRelationalExpression(ctx: RelationalExpressionContext) {
-        let rtn = ctx.additiveExpression(0).accept(this);
-        return rtn
+        let additiveExpr = ctx.additiveExpression().accept(this)
+
+        if (isType(ctx.relationalExpression())) {
+            let relExpr = ctx.relationalExpression()
+            let symbol = getSymbol(ctx)
+
+            let rtn = ["binary_operator_combination",
+                        [symbol, 
+                            [this.visitRelationalExpression(relExpr), 
+                                [additiveExpr, null]
+                            ]
+                        ]
+                ]
+            return rtn
+        }         
+        
+        return additiveExpr;
     }
 
     // @ts-ignore

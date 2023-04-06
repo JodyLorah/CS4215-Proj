@@ -218,9 +218,9 @@ const ast_to_json = (t) => {
                 expr: ast_to_json(head(tail(tail(t))))
             }
         case "assignment": {
-            // TO REPLACE   
             sym = head(tail(head(tail(t))))
-            if (head(sym) === "name") {
+            console.log(sym)
+            if (is_pair(sym) && head(sym) === "name") {
                 sym = ast_to_json(sym)
                 sym = sym.sym
             }
@@ -734,9 +734,9 @@ const scan = comp => {
         }
         remove_declarations(comp.stmts, dec_arr)
     } else if (comp.tag === 'let' || comp.tag === 'fun') {
-        console.log("AAAAAAAAAAAAAAAAAAAAAAA")
-        dict_set(sf, comp.sym, {})
-        if (is_null(stmts[i].expr)) { // remove variable declaration
+
+        dict_set(sf, comp.sym, {val: undefined, type: comp.type})
+        if (is_null(comp.expr)) { // remove variable declaration
             dec_arr.push(i)
         }
         comp.stmts = remove_declarations(comp.stmts, dec_arr)
@@ -910,7 +910,7 @@ const microcode = {
                 expr: {tag: 'lam', prms: cmd.prms, body: cmd.body}}),
     while:
         cmd =>
-            push(A, {tag: 'lit', val: undefined},
+            push(RTS, {tag: 'lit', val: undefined},
                 {tag: 'while_i', pred: cmd.pred, body: cmd.body},
                 cmd.pred),
 
@@ -923,6 +923,9 @@ const microcode = {
             if (LS.length === 0) {
                 let rtn_val = S.pop()
                 let obj = dict_get(SM, "main")
+
+                console.log(SM)
+                console.log("rtn val is : ", rtn_val, obj.type)
 
                 if (obj.type != get_type(rtn_val)) {
                     error("type mismatch with main")
@@ -1025,7 +1028,7 @@ const microcode = {
     while_i:
         cmd =>
             S.pop()
-                ? push(A, cmd,             // push while_i itself back on agenda
+                ? push(RTS, cmd,             // push while_i itself back on agenda
                     cmd.pred,
                     {tag: 'pop_i'},  // pop body value
                     cmd.body)
@@ -1173,7 +1176,8 @@ const execute = () => {
     // console.log("RTS: ", RTS)
     // console.log("stack: ", S)
     // console.log("local stack: ", LS)
-    // console.log("static mem: ", SM)
+    console.log("static mem: ", SM)
+    // error("done with main")
 
     const starting_pt = ["application", [["name", ["main", [dict_get(SM, "main").type, null]]], [dict_get(SM, "main").prms, null]]]
 
@@ -1211,7 +1215,6 @@ const execute = () => {
     console.log("stack: ", S)
     console.log("local stack: ", LS)
     console.log("static mem: ", SM)
-    console.log(SM["arr4"].val.elems)
 }
 
 

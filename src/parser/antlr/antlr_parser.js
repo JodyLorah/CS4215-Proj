@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import { CharStream, CommonTokenStream } from 'antlr4';
 import CVisitor from './antlr_gen/CVisitor.js';
 import CLexer from "./antlr_gen/CLexer.js"; // Had to add .js - This is a hack
-import CParser, { AdditiveExpressionContext, MultiplicativeExpressionContext } from "./antlr_gen/CParser.js";
+import CParser, { AdditiveExpressionContext, MultiplicativeExpressionContext, RelationalExpressionContext } from "./antlr_gen/CParser.js";
 function isType(x) {
     return x !== null;
 }
@@ -41,6 +41,23 @@ function getSymbol(x) {
         }
         else if (isType(x.Mod())) {
             return "%";
+        }
+        else {
+            throw new Error("type not allowed");
+        }
+    }
+    else if (x instanceof RelationalExpressionContext) {
+        if (isType(x.Less())) {
+            return "<";
+        }
+        else if (isType(x.Greater())) {
+            return ">";
+        }
+        else if (isType(x.LessEqual())) {
+            return "<=";
+        }
+        else if (isType(x.GreaterEqual())) {
+            return ">=";
         }
         else {
             throw new Error("type not allowed");
@@ -152,9 +169,23 @@ class Visitor extends CVisitor {
         else if (isType(ctx.expressionStatement())) {
             return ctx.expressionStatement().accept(this);
         }
+        else if (isType(ctx.iterationStatement())) {
+            return ctx.iterationStatement().accept(this);
+        }
         else {
             // TODO: iteration, selection statement
         }
+    }
+    // @ts-ignore
+    visitCompoundStatement(ctx) {
+        return ctx.blockItemList().accept(this);
+    }
+    // @ts-ignore
+    visitIterationStatement(ctx) {
+        let assExpr = ctx.assignmentExpression().accept(this);
+        let stmt = ctx.statement().accept(this);
+        console.log(stmt);
+        return ["while_loop", [assExpr, [stmt, null]]];
     }
     // @ts-ignore
     visitExpressionStatement(ctx) {
@@ -263,8 +294,20 @@ class Visitor extends CVisitor {
     }
     // @ts-ignore
     visitRelationalExpression(ctx) {
-        let rtn = ctx.additiveExpression(0).accept(this);
-        return rtn;
+        let additiveExpr = ctx.additiveExpression().accept(this);
+        if (isType(ctx.relationalExpression())) {
+            let relExpr = ctx.relationalExpression();
+            let symbol = getSymbol(ctx);
+            let rtn = ["binary_operator_combination",
+                [symbol,
+                    [this.visitRelationalExpression(relExpr),
+                        [additiveExpr, null]
+                    ]
+                ]
+            ];
+            return rtn;
+        }
+        return additiveExpr;
     }
     // @ts-ignore
     visitAdditiveExpression(ctx) {
