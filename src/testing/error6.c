@@ -1,6 +1,6 @@
-// array declaration of wrong size
+// array declaration of wrong type
 
-int arr[] = {1,2,3};
+int arr[] = {1,2.2,3};
 int arr5[5];
 int arr4[4] = {1,2,3,4};
 
