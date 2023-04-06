@@ -860,7 +860,7 @@ const microcode = {
             push(RTS, {tag: 'arr_acc_i'}, cmd.ind, cmd.arr),
     arr_assmt:
         cmd =>
-            push(RTS, {'tag': 'arr_assmt_i'}, cmd.expr, cmd.ind, cmd.arr),
+            push(RTS, {tag: 'arr_assmt_i', sym: cmd.arr.sym}, cmd.expr, cmd.ind, cmd.arr),
     arr_len:
         cmd =>
             push(A, {tag: 'arr_len_i'}, cmd.expr),
@@ -1038,6 +1038,7 @@ const microcode = {
             const ind = S.pop()
             const arr_obj = S.pop()
             const arr = arr_obj.val.elems
+            console.log(arr)
             if (ind >= arr.length || ind < 0) {
                 error("array access out of bounds")
             }
@@ -1047,8 +1048,29 @@ const microcode = {
         cmd => {
             const val = S.pop()
             const ind = S.pop()
-            const arr = S.pop()
+            let arr_obj = S.pop()
+            let arr = arr_obj.val.elems
+            if (ind >= arr.length || ind < 0) {
+                error("array access out of bounds")
+            }
+
+            type_check(get_info(cmd.sym).type, get_type(val))
+
             arr[ind] = val
+            arr_obj.val.elems = arr
+
+            // let name = cmd.sym
+            if (dict_has_key(peek(LS), cmd.sym)) {
+                let curr = LS.pop()
+                dict_set(curr, cmd.sym, arr_obj)
+                push(LS, curr)
+            } else if (dict_has_key(SM, cmd.sym)) {
+                dict_set(SM, cmd.sym, arr_obj)
+            } else {
+                error("assigning to undeclared name")
+            }
+
+            console.log(SM["arr5"].val.elems)
             push(S, val)
         },
     arr_len_i:
@@ -1189,6 +1211,7 @@ const execute = () => {
     console.log("stack: ", S)
     console.log("local stack: ", LS)
     console.log("static mem: ", SM)
+    console.log(SM["arr4"].val.elems)
 }
 
 

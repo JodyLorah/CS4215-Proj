@@ -187,9 +187,6 @@ class Visitor extends CVisitor {
                 }
             }
             rtn = ["variable_declaration", [dd, [["array_expression", [items, [size, null]]], null]]];
-            console.log(size);
-            printNestedArray(rtn);
-            console.log();
         }
         else if (isType(initDec.Assign())) {
             let rhs = initDec.initializer().accept(this);
@@ -241,7 +238,12 @@ class Visitor extends CVisitor {
             return ce;
         }
         let ue = ctx.unaryExpression().accept(this);
-        return ["assignment", [ue, [ce, null]]];
+        if (isType(ctx.unaryExpression().postfixExpression().LeftBracket())) {
+            return ["object_assignment", [ue, [ce, null]]];
+        }
+        else {
+            return ["assignment", [ue, [ce, null]]];
+        }
     }
     // @ts-ignore
     visitConditionalExpression(ctx) {

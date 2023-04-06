@@ -256,7 +256,12 @@ class Visitor extends CVisitor<Array<object>> {
             return ce
         }
         let ue = ctx.unaryExpression().accept(this)
-        return ["assignment", [ue, [ce, null]]]
+        if (isType(ctx.unaryExpression().postfixExpression().LeftBracket())) {
+            return ["object_assignment", [ue, [ce, null]]]
+        } else {
+            return ["assignment", [ue, [ce, null]]]
+        }
+        
     }
 
     // @ts-ignore
