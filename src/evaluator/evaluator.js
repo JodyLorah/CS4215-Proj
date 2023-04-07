@@ -829,7 +829,7 @@ const microcode = {
             push(RTS, {tag: 'binop_i', sym: cmd.sym}, cmd.scnd, cmd.frst),
     log:
         cmd =>
-            push(A, cmd.sym == '&&'
+            push(RTS, cmd.sym == '&&'
                 ? {tag: 'cond_expr',
                     pred: cmd.frst,
                     cons: {tag: 'lit', val: true},
@@ -840,7 +840,7 @@ const microcode = {
                     alt: {tag: 'lit', val: false}}),
     cond_expr:
         cmd =>
-            push(A, {tag: 'branch_i', cons: cmd.cons, alt: cmd.alt}, cmd.pred),
+            push(RTS, {tag: 'branch_i', cons: cmd.cons, alt: cmd.alt}, cmd.pred),
     app:
         cmd =>
             push(RTS, {tag: 'app_i', arity: cmd.args.length},
@@ -1024,7 +1024,7 @@ const microcode = {
         },
     branch_i:
         cmd =>
-            push(A, S.pop() ? cmd.cons : cmd.alt),
+            push(RTS, S.pop() ? cmd.cons : cmd.alt),
     while_i:
         cmd =>
             S.pop()
@@ -1172,11 +1172,12 @@ const execute = () => {
     if (!dict_has_key(SM, "main")) {
         error("main function not defined")
     }
+    
     console.log("done with global")
     // console.log("RTS: ", RTS)
     // console.log("stack: ", S)
     // console.log("local stack: ", LS)
-    console.log("static mem: ", SM)
+    // console.log("static mem: ", SM)
     // error("done with main")
 
     const starting_pt = ["application", [["name", ["main", [dict_get(SM, "main").type, null]]], [dict_get(SM, "main").prms, null]]]
@@ -1189,8 +1190,8 @@ const execute = () => {
         if (RTS.length == 0) break
         const cmd = RTS.pop()
         console.log("executing command: ", cmd)
-        console.log("stack: ", S)
-        console.log("local stack: ", LS)
+        // console.log("stack: ", S)
+        // console.log("local stack: ", LS)
         
         // console.log("new local stack: ", LS)
 

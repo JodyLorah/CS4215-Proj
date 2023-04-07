@@ -124,40 +124,49 @@ class Visitor extends CVisitor<Array<object>> {
             funcParams = ctx.directDeclarator().parameterList().accept(this)
         }
 
-        if (isType(ctx.compoundStatement().blockItemList())) {
-            let funcBody = [this.visitBlockItemList(ctx.compoundStatement().blockItemList()), null]
-
-            let lst = ctx.compoundStatement().blockItemList().blockItem_list()
-            for (var i in lst) {
-                if (lst[i].declaration()) {
-                    funcBody = [["block", funcBody], null]
-                    break
-                } 
-            }
-            
+        if (isType(ctx.compoundStatement())) {
+            let funcBody = ctx.compoundStatement().accept(this)
             return ["function_declaration", [name, [funcParams, funcBody]]]
-            
         }
         return ["function_declaration", [name, [funcParams, emptyBody]]]
 
     }
 
     // @ts-ignore
-    visitBlockItemList(ctx: BlockItemListContext) {
+    visitCompoundStatement(ctx: CompoundStatementContext) {
+        if (isType(ctx.blockItemList())) {
+            let rtn = ctx.blockItemList().accept(this)
+            return rtn
+        }
+        console.log(" what to do now ")
+        Error("here")
+    }
+
+    // @ts-ignore
+    visitBlockItemList(ctx: BlockItemListContext) {        
         let lst = ctx.blockItem_list()
         if (lst.length == 1) {
             if (isType(lst[0].statement())) {
-                return this.visitStatement(lst[0].statement())
+                return [this.visitStatement(lst[0].statement()), null]
             }
-            return this.visitDeclaration(lst[0].declaration())
+            
+            return [["block", [this.visitDeclaration(lst[0].declaration()), null]], null]
         }
 
+        let has_declaration = false
         let rtn = null;
-        lst = lst.reverse()
+        lst.reverse()
         for (var i in lst) {
+            if (isType(lst[i].declaration())) {
+                has_declaration = true
+            }
             rtn = [this.visitBlockItem(lst[i]), rtn]
         }
-        return ["sequence", [rtn, null]]
+        rtn = ["sequence", [rtn, null]]
+        if (has_declaration) {
+            return [["block", [rtn, null]], null]
+        }
+        return rtn
     }
 
     // @ts-ignore
@@ -179,22 +188,15 @@ class Visitor extends CVisitor<Array<object>> {
         } else if (isType(ctx.iterationStatement())) {
             return ctx.iterationStatement().accept(this)
         } else {
-            // TODO: iteration, selection statement
+            // TODO: selection statement
         }
-    }
-
-    // @ts-ignore
-    visitCompoundStatement(ctx: CompoundStatementContext) {
-        return ctx.blockItemList().accept(this)
-
     }
 
     // @ts-ignore
     visitIterationStatement(ctx: IterationStatementContext) {
         let assExpr = ctx.assignmentExpression().accept(this)
         let stmt = ctx.statement().accept(this)
-        console.log(stmt)
-        return ["while_loop", [assExpr, [stmt, null]]]
+        return ["while_loop", [assExpr, stmt]]
     }
 
     // @ts-ignore
@@ -281,6 +283,7 @@ class Visitor extends CVisitor<Array<object>> {
     // @ts-ignore
     visitAssignmentExpression(ctx: AssignmentExpressionContext) {
         let ce = ctx.conditionalExpression().accept(this);
+
         if (!isType(ctx.assignmentOperator())) {
             return ce
         }
@@ -300,17 +303,44 @@ class Visitor extends CVisitor<Array<object>> {
 
     // @ts-ignore
     visitLogicalOrExpression(ctx: LogicalOrExpressionContext) {
-        return ctx.logicalAndExpression(0).accept(this);
+        let logicalAndExpr = ctx.logicalAndExpression().accept(this)
+
+        if (isType(ctx.logicalOrExpression())) {
+            let logicalOrExpr = ctx.logicalOrExpression()
+            let symbol = "||"
+
+            let rtn = ["logical_composition",
+                        [symbol, 
+                            [this.visitLogicalOrExpression(logicalOrExpr), 
+                                [logicalAndExpr, null]
+                            ]
+                        ]
+                ]
+            return rtn
+        }         
+        
+        return logicalAndExpr;    
     }
     
     // @ts-ignore
     visitLogicalAndExpression(ctx: LogicalAndExpressionContext) {
-        return ctx.equalityExpression(0).accept(this);
-    }
-    
-    // @ts-ignore
-    visitEqualityExpression(ctx: EqualityExpressionContext) {
-        return ctx.relationalExpression(0).accept(this);
+        let relExpr = ctx.relationalExpression().accept(this)
+
+        if (isType(ctx.logicalAndExpression())) {
+            let logicalAndExpr = ctx.logicalAndExpression()
+            let symbol = "&&"
+
+            let rtn = ["logical_composition",
+                        [symbol, 
+                            [this.visitLogicalAndExpression(logicalAndExpr), 
+                                [relExpr, null]
+                            ]
+                        ]
+                ]
+            return rtn
+        }         
+        
+        return relExpr;
     }
     
     // @ts-ignore
@@ -424,7 +454,7 @@ class Visitor extends CVisitor<Array<object>> {
     // @ts-ignore
     visitArgumentExpressionList(ctx: ArgumentExpressionListContext) {
         let lst = ctx.assignmentExpression_list()
-        lst = lst.reverse()
+        lst.reverse()
 
         let rtn = null
         for (var i in lst) {

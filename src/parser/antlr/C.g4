@@ -87,6 +87,7 @@
         |   relationalExpression '>=' additiveExpression
         ;
 
+    /**
     equalityExpression
         :   relationalExpression
         |   equalityExpression '==' relationalExpression
@@ -108,8 +109,8 @@
     **/
 
     logicalAndExpression
-        :   equalityExpression 
-        |   logicalAndExpression '&&' equalityExpression
+        :   relationalExpression 
+        |   logicalAndExpression '&&' relationalExpression
         ;
 
     logicalOrExpression
