@@ -1,4 +1,4 @@
-// testing early termination
+// testing early termination and ==
 
 int main(){
     int i = 0;
