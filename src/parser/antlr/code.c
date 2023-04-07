@@ -1,9 +1,14 @@
-int main(){
-    int i = 0;
-
-    while (i != 0) {
-        return 10;
+int factorial(int n)  {  
+    if (n == 0)  {
+        return 1;  
+    } else {
+        return (n * factorial(n-1));  
     }
+}  
+   
+int main()  {  
+  int number;  
 
-    return i;
-}
+  int fact = factorial(6);  
+  return 6;  
+}  

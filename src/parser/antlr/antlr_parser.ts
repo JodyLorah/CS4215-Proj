@@ -156,10 +156,10 @@ class Visitor extends CVisitor<Array<object>> {
         let lst = ctx.blockItem_list()
         if (lst.length == 1) {
             if (isType(lst[0].statement())) {
-                return [this.visitStatement(lst[0].statement()), null]
+                return this.visitStatement(lst[0].statement())
             }
             
-            return [["block", [this.visitDeclaration(lst[0].declaration()), null]], null]
+            return ["block", [this.visitDeclaration(lst[0].declaration()), null]]
         }
 
         let has_declaration = false
@@ -173,7 +173,7 @@ class Visitor extends CVisitor<Array<object>> {
         }
         rtn = ["sequence", [rtn, null]]
         if (has_declaration) {
-            return [["block", [rtn, null]], null]
+            return ["block", [rtn, null]]
         }
         return rtn
     }
@@ -196,9 +196,26 @@ class Visitor extends CVisitor<Array<object>> {
             return ctx.expressionStatement().accept(this)
         } else if (isType(ctx.iterationStatement())) {
             return ctx.iterationStatement().accept(this)
-        } else {
-            // TODO: selection statement
+        } else if (isType(ctx.selectionStatement())){
+            return ctx.selectionStatement().accept(this)
         }
+    }
+
+    // @ts-ignore
+    visitSelectionStatement(ctx: SelectionStatementContext) {
+        let assExpr = ctx.assignmentExpression().accept(this)
+        let if_stmt = this.visitStatement(ctx.statement(0))
+        let else_stmt = [["sequence", [null, null]], null]
+
+        if (isType(ctx.Else())) {
+            else_stmt = [ctx.statement(1).accept(this), else_stmt]
+        }
+        printNestedArray(if_stmt)
+        console.log()
+        console.log()
+
+        return ["conditional_statement", [assExpr, [if_stmt, else_stmt]]]
+
     }
 
     // @ts-ignore
@@ -216,6 +233,9 @@ class Visitor extends CVisitor<Array<object>> {
     // @ts-ignore
     visitJumpStatement(ctx: JumpStatementContext) {
         let rtn = ["return_statement", [ctx.assignmentExpression().accept(this), null]]
+        printNestedArray(rtn)
+        console.log()
+        console.log()
         return rtn;
     }
 
@@ -503,8 +523,8 @@ class Visitor extends CVisitor<Array<object>> {
             return rtn
         // } else if (isType(ctx.StringLiteral())) {
         //     // TODO
-        } else if (isType(ctx.expression())) {
-            return this.visitExpression(ctx.expression())
+        } else if (isType(ctx.assignmentExpression())) {
+            return this.visitAssignmentExpression(ctx.assignmentExpression())
         }
     }
 

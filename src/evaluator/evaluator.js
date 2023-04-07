@@ -193,11 +193,12 @@ const ast_to_json = (t) => {
             }
         }
             
-        case "block":
+        case "block": {
             return {
                 tag: "blk",
                 body: ast_to_json(head(tail(t)))
             }
+        }
         case "variable_declaration":
             let exp = head(tail(tail(t)))
 
@@ -260,7 +261,7 @@ const ast_to_json = (t) => {
                 type: head(tail(tail(head(tail(t))))),
                 // prms: head(tail(tail(t))),
                 prms: parameters([], head(tail(tail(t)))),
-                body: ast_to_json(head(tail(tail(tail(t)))))
+                body: ast_to_json(tail(tail(tail(t))))
             }
         case "return_statement":
             return {
@@ -875,7 +876,7 @@ const microcode = {
         cmd => push(RTS, ...handle_sequence(cmd.stmts)),
     cond_stmt:
         cmd =>
-            push(A, {tag: 'branch_i', cons: cmd.cons, alt: cmd.alt},
+            push(RTS, {tag: 'branch_i', cons: cmd.cons, alt: cmd.alt},
                 cmd.pred),
     blk:
         cmd => {
