@@ -1,3 +1,5 @@
+// testing early termination
+
 int main(){
     int i = 0;
 

@@ -12,6 +12,7 @@ import { CastExpressionContext } from "./CParser";
 import { MultiplicativeExpressionContext } from "./CParser";
 import { AdditiveExpressionContext } from "./CParser";
 import { RelationalExpressionContext } from "./CParser";
+import { EqualityExpressionContext } from "./CParser";
 import { LogicalAndExpressionContext } from "./CParser";
 import { LogicalOrExpressionContext } from "./CParser";
 import { ConditionalExpressionContext } from "./CParser";
@@ -110,6 +111,12 @@ export default class CVisitor<Result> extends ParseTreeVisitor<Result> {
 	 * @return the visitor result
 	 */
 	visitRelationalExpression?: (ctx: RelationalExpressionContext) => Result;
+	/**
+	 * Visit a parse tree produced by `CParser.equalityExpression`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitEqualityExpression?: (ctx: EqualityExpressionContext) => Result;
 	/**
 	 * Visit a parse tree produced by `CParser.logicalAndExpression`.
 	 * @param ctx the parse tree

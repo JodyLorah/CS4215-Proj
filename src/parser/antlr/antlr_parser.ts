@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import {CharStream, CommonTokenStream} from 'antlr4';
 import CVisitor from './antlr_gen/CVisitor.js';
 import CLexer from "./antlr_gen/CLexer.js"; // Had to add .js - This is a hack
-import CParser, {AdditiveExpressionContext, ArgumentExpressionListContext, AssignmentExpressionContext, BlockItemContext, BlockItemListContext, CompilationUnitContext, CompoundStatementContext, DeclarationContext, DirectDeclaratorContext, ExpressionStatementContext, FunctionDefinitionContext, InitializerContext, IterationStatementContext, MultiplicativeExpressionContext, ParameterDeclarationContext, ParameterListContext, PostfixExpressionContext, RelationalExpressionContext, TranslationUnitContext, TypeSpecifierContext} from "./antlr_gen/CParser.js";
+import CParser, {AdditiveExpressionContext, ArgumentExpressionListContext, AssignmentExpressionContext, BlockItemContext, BlockItemListContext, CompilationUnitContext, CompoundStatementContext, DeclarationContext, DirectDeclaratorContext, EqualityExpressionContext, ExpressionStatementContext, FunctionDefinitionContext, InitializerContext, IterationStatementContext, MultiplicativeExpressionContext, ParameterDeclarationContext, ParameterListContext, PostfixExpressionContext, RelationalExpressionContext, TranslationUnitContext, TypeSpecifierContext} from "./antlr_gen/CParser.js";
 import { assert } from 'console';
 import { exit } from 'process';
 
@@ -25,7 +25,8 @@ function stringifyType(x: TypeSpecifierContext): string {
 function getSymbol(x: AdditiveExpressionContext): string;
 function getSymbol(x: MultiplicativeExpressionContext): string;
 function getSymbol(x: RelationalExpressionContext): string;
-function getSymbol(x: AdditiveExpressionContext | MultiplicativeExpressionContext | RelationalExpressionContext): string {
+function getSymbol(x: EqualityExpressionContext): string;
+function getSymbol(x: AdditiveExpressionContext | MultiplicativeExpressionContext | RelationalExpressionContext | EqualityExpressionContext): string {
     if (x instanceof AdditiveExpressionContext) {
         if (isType(x.Plus())) {
             return "+";
@@ -53,6 +54,14 @@ function getSymbol(x: AdditiveExpressionContext | MultiplicativeExpressionContex
             return "<=";
         } else if (isType(x.GreaterEqual())) {
             return ">="
+        } else {
+            throw new Error("type not allowed");
+        }
+    } else if (x instanceof EqualityExpressionContext) {
+        if (isType(x.Equal())) {
+            return "==="
+        } else if (isType(x.NotEqual())) {
+            return "!=="
         } else {
             throw new Error("type not allowed");
         }
@@ -324,7 +333,7 @@ class Visitor extends CVisitor<Array<object>> {
     
     // @ts-ignore
     visitLogicalAndExpression(ctx: LogicalAndExpressionContext) {
-        let relExpr = ctx.relationalExpression().accept(this)
+        let eqlExpr = ctx.equalityExpression().accept(this)
 
         if (isType(ctx.logicalAndExpression())) {
             let logicalAndExpr = ctx.logicalAndExpression()
@@ -333,6 +342,27 @@ class Visitor extends CVisitor<Array<object>> {
             let rtn = ["logical_composition",
                         [symbol, 
                             [this.visitLogicalAndExpression(logicalAndExpr), 
+                                [eqlExpr, null]
+                            ]
+                        ]
+                ]
+            return rtn
+        }         
+        
+        return eqlExpr;
+    }
+
+    // @ts-ignore
+    visitEqualityExpression(ctx: EqualityExpressionContext) {
+        let relExpr = ctx.relationalExpression().accept(this)
+
+        if (isType(ctx.equalityExpression())) {
+            let equalityExpressionExpr = ctx.equalityExpression()
+            let symbol = getSymbol(ctx)
+
+            let rtn = ["binary_operator_combination",
+                        [symbol, 
+                            [this.visitEqualityExpression(equalityExpressionExpr), 
                                 [relExpr, null]
                             ]
                         ]
@@ -340,7 +370,7 @@ class Visitor extends CVisitor<Array<object>> {
             return rtn
         }         
         
-        return relExpr;
+        return relExpr;    
     }
     
     // @ts-ignore

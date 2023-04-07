@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import { CharStream, CommonTokenStream } from 'antlr4';
 import CVisitor from './antlr_gen/CVisitor.js';
 import CLexer from "./antlr_gen/CLexer.js"; // Had to add .js - This is a hack
-import CParser, { AdditiveExpressionContext, MultiplicativeExpressionContext, RelationalExpressionContext } from "./antlr_gen/CParser.js";
+import CParser, { AdditiveExpressionContext, EqualityExpressionContext, MultiplicativeExpressionContext, RelationalExpressionContext } from "./antlr_gen/CParser.js";
 function isType(x) {
     return x !== null;
 }
@@ -58,6 +58,17 @@ function getSymbol(x) {
         }
         else if (isType(x.GreaterEqual())) {
             return ">=";
+        }
+        else {
+            throw new Error("type not allowed");
+        }
+    }
+    else if (x instanceof EqualityExpressionContext) {
+        if (isType(x.Equal())) {
+            return "===";
+        }
+        else if (isType(x.NotEqual())) {
+            return "!==";
         }
         else {
             throw new Error("type not allowed");
@@ -304,13 +315,30 @@ class Visitor extends CVisitor {
     }
     // @ts-ignore
     visitLogicalAndExpression(ctx) {
-        let relExpr = ctx.relationalExpression().accept(this);
+        let eqlExpr = ctx.equalityExpression().accept(this);
         if (isType(ctx.logicalAndExpression())) {
             let logicalAndExpr = ctx.logicalAndExpression();
             let symbol = "&&";
             let rtn = ["logical_composition",
                 [symbol,
                     [this.visitLogicalAndExpression(logicalAndExpr),
+                        [eqlExpr, null]
+                    ]
+                ]
+            ];
+            return rtn;
+        }
+        return eqlExpr;
+    }
+    // @ts-ignore
+    visitEqualityExpression(ctx) {
+        let relExpr = ctx.relationalExpression().accept(this);
+        if (isType(ctx.equalityExpression())) {
+            let equalityExpressionExpr = ctx.equalityExpression();
+            let symbol = getSymbol(ctx);
+            let rtn = ["binary_operator_combination",
+                [symbol,
+                    [this.visitEqualityExpression(equalityExpressionExpr),
                         [relExpr, null]
                     ]
                 ]

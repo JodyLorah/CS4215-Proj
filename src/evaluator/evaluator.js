@@ -932,6 +932,9 @@ const microcode = {
                 }
                 obj.rtn = rtn_val
                 dict_set(SM, "main", rtn_val)
+
+                // clear RTS for early termination
+                RTS = []
             }
 
             // return to main
@@ -1172,7 +1175,7 @@ const execute = () => {
     if (!dict_has_key(SM, "main")) {
         error("main function not defined")
     }
-    
+
     console.log("done with global")
     // console.log("RTS: ", RTS)
     // console.log("stack: ", S)

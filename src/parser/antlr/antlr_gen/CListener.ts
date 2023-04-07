@@ -12,6 +12,7 @@ import { CastExpressionContext } from "./CParser";
 import { MultiplicativeExpressionContext } from "./CParser";
 import { AdditiveExpressionContext } from "./CParser";
 import { RelationalExpressionContext } from "./CParser";
+import { EqualityExpressionContext } from "./CParser";
 import { LogicalAndExpressionContext } from "./CParser";
 import { LogicalOrExpressionContext } from "./CParser";
 import { ConditionalExpressionContext } from "./CParser";
@@ -143,6 +144,16 @@ export default class CListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	exitRelationalExpression?: (ctx: RelationalExpressionContext) => void;
+	/**
+	 * Enter a parse tree produced by `CParser.equalityExpression`.
+	 * @param ctx the parse tree
+	 */
+	enterEqualityExpression?: (ctx: EqualityExpressionContext) => void;
+	/**
+	 * Exit a parse tree produced by `CParser.equalityExpression`.
+	 * @param ctx the parse tree
+	 */
+	exitEqualityExpression?: (ctx: EqualityExpressionContext) => void;
 	/**
 	 * Enter a parse tree produced by `CParser.logicalAndExpression`.
 	 * @param ctx the parse tree
