@@ -145,8 +145,6 @@ class Visitor extends CVisitor {
             let rtn = ctx.blockItemList().accept(this);
             return rtn;
         }
-        console.log(" what to do now ");
-        Error("here");
     }
     // @ts-ignore
     visitBlockItemList(ctx) {
@@ -247,11 +245,6 @@ class Visitor extends CVisitor {
                 else if (isType(initDec.initializer().assignmentExpression())) { // assignment expr aka string
                     let assExpr = initDec.initializer().assignmentExpression().accept(this);
                     items = assExpr;
-                    console.log("in assingment expr");
-                    // printNestedArray(assExpr)
-                    // console.log()
-                    // console.log()
-                    // console.log()
                 }
             }
             rtn = ["variable_declaration", [dd, [["array_expression", [items, [size, null]]], null]]];
@@ -471,7 +464,6 @@ class Visitor extends CVisitor {
     }
     // @ts-ignore
     visitPrimaryExpression(ctx) {
-        console.log("in pri exp");
         if (isType(ctx.Identifier())) {
             const name = ctx.Identifier().getText();
             return ["name", [name, [null, null]]];
@@ -481,8 +473,6 @@ class Visitor extends CVisitor {
             return rtn;
         }
         else if (isType(ctx.StringLiteral(0))) {
-            console.log((ctx.StringLiteral(0).getText()));
-            console.log("type str lit");
             let str = String(ctx.StringLiteral(0).getText());
             let str_len = str.length;
             let rtn = null;
@@ -500,7 +490,6 @@ class Visitor extends CVisitor {
             return rtn;
         }
         else if (isType(ctx.assignmentExpression())) {
-            console.log("none");
             return this.visitAssignmentExpression(ctx.assignmentExpression());
         }
     }

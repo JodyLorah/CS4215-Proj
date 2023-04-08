@@ -147,8 +147,6 @@ class Visitor extends CVisitor<Array<object>> {
             let rtn = ctx.blockItemList().accept(this)
             return rtn
         }
-        console.log(" what to do now ")
-        Error("here")
     }
 
     // @ts-ignore
@@ -259,12 +257,6 @@ class Visitor extends CVisitor<Array<object>> {
                 } else if (isType(initDec.initializer().assignmentExpression())) { // assignment expr aka string
                     let assExpr = initDec.initializer().assignmentExpression().accept(this)
                     items = assExpr
-                    console.log("in assingment expr")
-                    // printNestedArray(assExpr)
-                    // console.log()
-                    // console.log()
-                    // console.log()
-                    
                 }
                 
             }
@@ -283,8 +275,6 @@ class Visitor extends CVisitor<Array<object>> {
         } else {
             if (isType(ctx.parameterList())) {
                 return ctx.parameterList().accept(this)
-            } else if (isType(ctx.identifierList())) {
-                // TODO
             } else {
                 return this.visitDirectDeclarator(ctx.directDeclarator())
             }
@@ -521,7 +511,6 @@ class Visitor extends CVisitor<Array<object>> {
     
     // @ts-ignore
     visitPrimaryExpression(ctx: PrimaryExpressionContext) {
-        console.log("in pri exp")
         if (isType(ctx.Identifier())) {
             const name = ctx.Identifier().getText()
             return ["name", [name, [null, null]]]
@@ -529,8 +518,6 @@ class Visitor extends CVisitor<Array<object>> {
             let rtn = ["literal", [Number(ctx.Constant().getText()), null]]
             return rtn
         } else if (isType(ctx.StringLiteral(0))) {
-            console.log((ctx.StringLiteral(0).getText()))
-            console.log("type str lit")
             let str = String(ctx.StringLiteral(0).getText())
             let str_len = str.length
             let rtn = null
@@ -548,7 +535,6 @@ class Visitor extends CVisitor<Array<object>> {
             
             return rtn
         } else if (isType(ctx.assignmentExpression())) {
-            console.log("none")
             return this.visitAssignmentExpression(ctx.assignmentExpression())
         } 
     }
