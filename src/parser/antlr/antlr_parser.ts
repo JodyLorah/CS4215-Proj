@@ -210,10 +210,6 @@ class Visitor extends CVisitor<Array<object>> {
         if (isType(ctx.Else())) {
             else_stmt = [ctx.statement(1).accept(this), else_stmt]
         }
-        printNestedArray(if_stmt)
-        console.log()
-        console.log()
-
         return ["conditional_statement", [assExpr, [if_stmt, else_stmt]]]
 
     }
@@ -233,9 +229,6 @@ class Visitor extends CVisitor<Array<object>> {
     // @ts-ignore
     visitJumpStatement(ctx: JumpStatementContext) {
         let rtn = ["return_statement", [ctx.assignmentExpression().accept(this), null]]
-        printNestedArray(rtn)
-        console.log()
-        console.log()
         return rtn;
     }
 
@@ -254,13 +247,26 @@ class Visitor extends CVisitor<Array<object>> {
             if (isType(dirDec.assignmentExpression())) {
                 size = this.visitAssignmentExpression(dirDec.assignmentExpression())
             }
-            if (isType(initDec.initializer())) {
-                let lst = initDec.initializer().initializerList().initializer_list()
-                lst.reverse()
 
-                for (var i in lst) {
-                    items = [this.visitInitializer(lst[i]), items]
+            if (isType(initDec.initializer())) {
+                if (isType(initDec.initializer().initializerList())) {
+                    let lst = initDec.initializer().initializerList().initializer_list()
+                    lst.reverse()
+
+                    for (var i in lst) {
+                        items = [this.visitInitializer(lst[i]), items]
+                    }
+                } else if (isType(initDec.initializer().assignmentExpression())) { // assignment expr aka string
+                    let assExpr = initDec.initializer().assignmentExpression().accept(this)
+                    items = assExpr
+                    console.log("in assingment expr")
+                    // printNestedArray(assExpr)
+                    // console.log()
+                    // console.log()
+                    // console.log()
+                    
                 }
+                
             }
             rtn = ["variable_declaration", [dd, [["array_expression",[items, [size, null]]], null]]]
         } else if (isType(initDec.Assign())) {
@@ -515,17 +521,36 @@ class Visitor extends CVisitor<Array<object>> {
     
     // @ts-ignore
     visitPrimaryExpression(ctx: PrimaryExpressionContext) {
+        console.log("in pri exp")
         if (isType(ctx.Identifier())) {
             const name = ctx.Identifier().getText()
             return ["name", [name, [null, null]]]
         } else if  (isType(ctx.Constant())) {
             let rtn = ["literal", [Number(ctx.Constant().getText()), null]]
             return rtn
-        // } else if (isType(ctx.StringLiteral())) {
-        //     // TODO
+        } else if (isType(ctx.StringLiteral(0))) {
+            console.log((ctx.StringLiteral(0).getText()))
+            console.log("type str lit")
+            let str = String(ctx.StringLiteral(0).getText())
+            let str_len = str.length
+            let rtn = null
+            let str_arr = str.split("")
+            str_arr.reverse()
+            str = str_arr.join("")
+
+            if (str_len === 3) { // string is a single char
+                rtn = ["literal", [str[1], null]]
+            } else {
+                for (let i = 1; i < str_len - 1; i++) { // to avoid escape characters
+                    rtn = [["literal", [str[i], null]], rtn]
+                }
+            }
+            
+            return rtn
         } else if (isType(ctx.assignmentExpression())) {
+            console.log("none")
             return this.visitAssignmentExpression(ctx.assignmentExpression())
-        }
+        } 
     }
 
     // @ts-ignore

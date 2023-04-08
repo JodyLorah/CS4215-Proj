@@ -333,7 +333,7 @@ const get_type = (x) => {
     return x.tag === "lit"  
             ? get_type(x.val)
             : typeof(x) === "string"
-            ? "string"
+            ? "char"
             : is_int(x) 
             ? "int"
             : is_double(x)
@@ -1055,29 +1055,38 @@ const microcode = {
         cmd => {
             const val = S.pop()
             const ind = S.pop()
+            console.log("S: ", S)
             let arr_obj = S.pop()
-            let arr = arr_obj.val.elems
+            console.log(arr_obj)
+
+            console.log("empty is: ", SM["mt"])
+
+            let arr; 
+            if (arr_obj.val === undefined) {
+                arr = arr_obj.elems
+            } else {
+                arr = arr_obj.val.elems
+            }
             if (ind >= arr.length || ind < 0) {
                 error("array access out of bounds")
             }
 
             type_check(get_info(cmd.sym).type, get_type(val))
-
+            
             arr[ind] = val
-            arr_obj.val.elems = arr
+            let new_obj = {val: arr, type: get_type(val)}
 
             // let name = cmd.sym
             if (dict_has_key(peek(LS), cmd.sym)) {
                 let curr = LS.pop()
-                dict_set(curr, cmd.sym, arr_obj)
+                dict_set(curr, cmd.sym, new_obj)
                 push(LS, curr)
             } else if (dict_has_key(SM, cmd.sym)) {
-                dict_set(SM, cmd.sym, arr_obj)
+                dict_set(SM, cmd.sym, new_obj)
             } else {
                 error("assigning to undeclared name")
             }
 
-            console.log(SM["arr5"].val.elems)
             push(S, val)
         },
     arr_len_i:
@@ -1220,6 +1229,8 @@ const execute = () => {
     console.log("stack: ", S)
     console.log("local stack: ", LS)
     console.log("static mem: ", SM)
+
+    console.log("Program finished with code ", SM["main"])
 }
 
 

@@ -1,14 +1,12 @@
-int factorial(int n)  {  
-    if (n == 0)  {
-        return 1;  
-    } else {
-        return (n * factorial(n-1));  
-    }
-}  
-   
-int main()  {  
-  int number;  
+int main()  
+{  
+  int mt[2];
+  mt[0] = 2;
+  int number[] = {1,2,3};  
+  char x[] = "a1c";
+  
+  number[1] = 2;
+  x[2] = "d";
 
-  int fact = factorial(6);  
-  return 6;  
+  return 1;  
 }  
