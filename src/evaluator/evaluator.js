@@ -1066,7 +1066,7 @@ const execute = () => {
         i++
     }
 
-    console.log("Program finished with code ", SM["main"])
+    console.log("Program finished with code", SM["main"])
 }
 
 /* *********
@@ -1083,3 +1083,14 @@ const command_to_string = cmd =>
     (cmd.tag === 'env_i')
         ? '{ tag: "env_i", env: ...}'
         : JSON.stringify(cmd)
+
+
+/* *******
+ * testing
+ * *******/
+
+const test = () => {
+    execute()
+}
+
+test()
