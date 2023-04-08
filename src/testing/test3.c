@@ -10,7 +10,7 @@ int main(){
     i = a;
     int c = f(1,2,3);
     int fun = f1();
-    return 2;
+    return i;
 }
 
 int f(int x, int y, int z) {

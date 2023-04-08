@@ -1,5 +1,3 @@
-// tail call(?)
-
 // shows type checking for params
 int i = 0;
 int y = 3+2;

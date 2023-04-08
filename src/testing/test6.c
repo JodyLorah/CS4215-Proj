@@ -7,5 +7,5 @@ int arr4[4] = {1,2,3,4};
 int main(){
     int i = 0;
     arr5[2] = i;
-    return i;
+    return arr5[2];
 }

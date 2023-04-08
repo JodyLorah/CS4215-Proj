@@ -1,4 +1,5 @@
 // error reassignment of global var not allowed
+// flagged out by parser
 
 int k = 2;
 k = 4;

@@ -4,8 +4,35 @@ Object.entries(require('sicp'))
     .forEach(([name, exported]) => global[name] = exported);
 
 // import parsed code as tokens
-var CodeTokens = require('../parser/antlr/antlr_tokens.json');
-// import Parse from '../parser/antlr/antlr_parser.js';
+var tokens_test1 = require('../testing/tokens/tokens_test1.json');
+var tokens_test2 = require('../testing/tokens/tokens_test2.json');
+var tokens_test3 = require('../testing/tokens/tokens_test3.json');
+var tokens_test4 = require('../testing/tokens/tokens_test4.json');
+var tokens_test5 = require('../testing/tokens/tokens_test5.json');
+var tokens_test6 = require('../testing/tokens/tokens_test6.json');
+var tokens_test7 = require('../testing/tokens/tokens_test7.json');
+var tokens_test8 = require('../testing/tokens/tokens_test8.json');
+var tokens_test9 = require('../testing/tokens/tokens_test9.json');
+var tokens_test10 = require('../testing/tokens/tokens_test10.json');
+var tokens_test11 = require('../testing/tokens/tokens_test11.json');
+var tokens_test12 = require('../testing/tokens/tokens_test12.json');
+var tokens_test13 = require('../testing/tokens/tokens_test13.json');
+var tokens_test14 = require('../testing/tokens/tokens_test14.json');
+var tokens_test15 = require('../testing/tokens/tokens_test15.json');
+var tokens_test16 = require('../testing/tokens/tokens_test16.json');
+var tokens_test17 = require('../testing/tokens/tokens_test17.json');
+
+var tokens_error1 = require('../testing/tokens/tokens_error1.json');
+var tokens_error2 = require('../testing/tokens/tokens_error2.json');
+var tokens_error3 = require('../testing/tokens/tokens_error3.json');
+var tokens_error4 = require('../testing/tokens/tokens_error4.json');
+var tokens_error5 = require('../testing/tokens/tokens_error5.json');
+var tokens_error6 = require('../testing/tokens/tokens_error6.json');
+var tokens_error7 = require('../testing/tokens/tokens_error7.json');
+var tokens_error8 = require('../testing/tokens/tokens_error8.json');
+
+
+
 /* ****************************************
  * Explicit-control evaluator for C
  * ****************************************/
@@ -76,6 +103,7 @@ const parameters = (rtn, xs) => {
 
 // turn tagged list syntax from parse into JSON object
 const ast_to_json = (t) => {
+    // console.log(t)
     switch (head(t)) {
         case "literal":
             return { tag: "lit", val: head(tail(t)) }
@@ -153,7 +181,11 @@ const ast_to_json = (t) => {
                 is_empty_items = false
                 items = parameters([], head(tail(t)))
             } else {
-                items = new Array(size)
+                items = []
+
+                for (let i = 0; i < size; i++) {
+                    items.push({})
+                }
             }
 
             // if there are items && size declared, check if they tally
@@ -353,6 +385,8 @@ const get_info = key => {
 }
 
 const type_check = (x, y) => {
+    // console.log(x)
+    // console.log(y)
     if (typeof(x) === typeof(y)) {
         // string or number
         if (typeof(x) === "number") {
@@ -374,11 +408,18 @@ const type_check = (x, y) => {
         if (is_null(info_y)) {
             info_y = y
         }
+        
+        // console.log(get_type(info_y))
+        // console.log(info_x)
+
+        // if (info_y.elems === undefined) {
+        //     info_y = info_y.val
+        // }
 
         if (info_y.tag === "arr_lit") {
             let lst = info_y.elems
             for (var i in lst) {
-                if (info_x.type != get_type(lst[i].val) ) {
+                if (Object.keys(lst[i]).length > 0 && info_x.type != get_type(lst[i].val)) {
                     error("array obj declared is of different type")
                 }
             }
@@ -386,7 +427,9 @@ const type_check = (x, y) => {
         }
         if (info_x.type === get_type(info_y)) {
             return
-        } 
+        } else if (get_type(info_x === get_type(info_y))){
+            return
+        }
     }
     error("type mismatch")
 }
@@ -806,7 +849,7 @@ const microcode = {
             push(RTS, {tag: 'binop_i', sym: cmd.sym}, cmd.scnd, cmd.frst),
     log:
         cmd =>
-            push(RTS, cmd.sym == '&&'
+            push(RTS, cmd.sym == '||'
                 ? {tag: 'cond_expr',
                     pred: cmd.frst,
                     cons: {tag: 'lit', val: true},
@@ -889,10 +932,14 @@ const microcode = {
                 let rtn_val = S.pop()
                 let obj = dict_get(SM, "main")
 
-
                 if (obj.type != get_type(rtn_val)) {
                     error("type mismatch with main")
                 }
+                
+                if (rtn_val.val != undefined) {
+                    rtn_val = rtn_val.val
+                }
+
                 obj.rtn = rtn_val
                 dict_set(SM, "main", rtn_val)
 
@@ -966,7 +1013,18 @@ const microcode = {
         cmd => {
             const ind = S.pop()
             const arr_obj = S.pop()
-            const arr = arr_obj.val.elems
+            let arr; 
+            if (arr_obj.val === undefined) {
+                arr = arr_obj.elems
+            } else {
+                if (arr_obj.val.elems === undefined) {
+                    arr = arr_obj.val
+                } else {
+                    arr = arr_obj.val.elems
+                }
+            }
+            // console.log(arr)
+
             if (ind >= arr.length || ind < 0) {
                 error("array access out of bounds")
             }
@@ -980,10 +1038,12 @@ const microcode = {
 
             let arr; 
             if (arr_obj.val === undefined) {
+                // console.log("happened")
                 arr = arr_obj.elems
             } else {
                 arr = arr_obj.val.elems
             }
+            // console.log(arr.length)
             if (ind >= arr.length || ind < 0) {
                 error("array access out of bounds")
             }
@@ -1021,6 +1081,8 @@ const process_global_dec = (decs) => {
     while (i < step_limit) {
         if (RTS.length === 0) break
         const cmd = RTS.pop()
+        // console.log("cmd is:", cmd)
+
         if (microcode.hasOwnProperty(cmd.tag)) {
             microcode[cmd.tag](cmd)
         } else {
@@ -1034,12 +1096,12 @@ const process_global_dec = (decs) => {
     return LS[0]
 }
 
-const execute = () => {
+const execute = (tokens) => {
     SM = {}
     S = []
     RTS = []
 
-    const declarations = parse_to_json(CodeTokens)
+    const declarations = parse_to_json(tokens)
     SM = process_global_dec(declarations)
     LS = []
 
@@ -1059,6 +1121,13 @@ const execute = () => {
         const cmd = RTS.pop()
 
         if (microcode.hasOwnProperty(cmd.tag)) {
+            // console.log("command is:", cmd)
+            // console.log("S is:", S)
+            // display("", "RTS:")
+            // for (let cmd of RTS) 
+            //     display('', command_to_string(cmd))
+            // console.log()
+
             microcode[cmd.tag](cmd)
         } else {
             error("", "unknown command: " , cmd)
@@ -1067,30 +1136,55 @@ const execute = () => {
     }
 
     console.log("Program finished with code", SM["main"])
+    return SM["main"]
 }
 
 /* *********
  * debugging
  * *********/
-
+const command_to_string = cmd =>
+    (cmd.tag === 'env_i')
+    ? '{ tag: "env_i", env: ...}'
+    : JSON.stringify(cmd)
 // used for display of environments
 const all_except_last = xs =>
     is_null(tail(xs))
         ? null
         : pair(head(xs), all_except_last(tail(xs)))
 
-const command_to_string = cmd =>
-    (cmd.tag === 'env_i')
-        ? '{ tag: "env_i", env: ...}'
-        : JSON.stringify(cmd)
-
 
 /* *******
  * testing
  * *******/
+let counter = 1;
 
-const test = () => {
-    execute()
+const test = (tokens, expected) => {
+    console.log("Testing tokes from:", "tokens_test", counter)
+    const result = execute(tokens)
+    if (stringify(result) === stringify(expected)) {
+        display(result, "success:")
+    } else {
+        display(expected, "FAILURE! expected:")
+        error(result, "result:")
+    }
+    counter++
 }
 
-test()
+test(tokens_test1, 2)
+test(tokens_test2, 3)
+test(tokens_test3, 10)
+test(tokens_test4, 133)
+test(tokens_test5, 3)
+test(tokens_test6, 0)
+test(tokens_test7, 3)
+test(tokens_test8, 6)
+test(tokens_test9, 4)
+test(tokens_test10, 0)
+test(tokens_test11, 4)
+test(tokens_test12, 0)
+test(tokens_test13, 10)
+test(tokens_test14, 2)
+test(tokens_test15, 0)
+test(tokens_test16, 720)
+test(tokens_test17, 0)
+
