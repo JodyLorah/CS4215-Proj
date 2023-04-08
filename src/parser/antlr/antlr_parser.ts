@@ -70,7 +70,7 @@ function getSymbol(x: AdditiveExpressionContext | MultiplicativeExpressionContex
     }
 }
 
-
+// used for debugging
 function printNestedArray(arr: any[]) {
     process.stdout.write("[");
     arr.forEach((el, index) => {
@@ -94,8 +94,7 @@ class Visitor extends CVisitor<Array<object>> {
 
     // @ts-ignore
     visitCompilationUnit(ctx: CompilationUnitContext) {
-        let rtn = ctx.translationUnit().accept(this)
-        return rtn
+        return ctx.translationUnit().accept(this)
     }
 
     // @ts-ignore
@@ -144,8 +143,7 @@ class Visitor extends CVisitor<Array<object>> {
     // @ts-ignore
     visitCompoundStatement(ctx: CompoundStatementContext) {
         if (isType(ctx.blockItemList())) {
-            let rtn = ctx.blockItemList().accept(this)
-            return rtn
+            return ctx.blockItemList().accept(this)
         }
     }
 
@@ -226,8 +224,7 @@ class Visitor extends CVisitor<Array<object>> {
 
     // @ts-ignore
     visitJumpStatement(ctx: JumpStatementContext) {
-        let rtn = ["return_statement", [ctx.assignmentExpression().accept(this), null]]
-        return rtn;
+        return ["return_statement", [ctx.assignmentExpression().accept(this), null]];
     }
 
     // @ts-ignore
