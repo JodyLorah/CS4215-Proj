@@ -76,9 +76,6 @@ const parameters = (rtn, xs) => {
 
 // turn tagged list syntax from parse into JSON object
 const ast_to_json = (t) => {
-    // printNestedArray(t)
-    // console.log()
-    // console.log()
     switch (head(t)) {
         case "literal":
             return { tag: "lit", val: head(tail(t)) }
@@ -220,7 +217,6 @@ const ast_to_json = (t) => {
             }
         case "assignment": {
             sym = head(tail(head(tail(t))))
-            console.log(sym)
             if (is_pair(sym) && head(sym) === "name") {
                 sym = ast_to_json(sym)
                 sym = sym.sym
@@ -345,7 +341,6 @@ const get_type = (x) => {
 
 const get_info = key => {
     let curr = peek(LS)
-    console.log("curr: ",curr)
     if (dict_has_key(curr, key)) {
         let rtn = dict_get(curr, key)
         return rtn
@@ -371,17 +366,13 @@ const type_check = (x, y) => {
     } else {
         let info_x = get_info(x)
         let info_y = get_info(y)
-        console.log("info x: ", info_x)
-        console.log("info y: ", info_y)
 
         if (is_null(info_x)) {
             info_x = x
-            console.log("x is: ", x)
         }
 
         if (is_null(info_y)) {
             info_y = y
-            console.log("y is: ", y)
         }
 
         if (info_y.tag === "arr_lit") {
@@ -393,7 +384,6 @@ const type_check = (x, y) => {
             }
             return
         }
-        console.log("type is: ", (info_y) )
         if (info_x.type === get_type(info_y)) {
             return
         } 
@@ -425,7 +415,6 @@ const binop_microcode = {
 // v2 is popped before v1
 const apply_binop = (op, v2, v1) => {
     type_check(v1, v2)
-    console.log(typeof(v1))
     return binop_microcode[op](v1, v2)
 }
 
@@ -568,7 +557,6 @@ const lookup = (key) => {
             if (is_literal(obj)) {
                 return obj.val
             }
-            console.log("obj is: ", obj)
             return obj
         }
     }
@@ -576,7 +564,6 @@ const lookup = (key) => {
 
     // search in static memory
     if (dict_has_key(SM, key)) {
-        console.log("returning: ", dict_get(SM, key))
         return dict_get(SM, key)
     } else {
         error(x, 'unbound name:')
@@ -611,25 +598,19 @@ const assign = (x, v) => {
                 let obj = {val: v, type: dict_get(curr, x).type}
                 dict_set(curr, x, obj)
                 push(LS, curr)
-                // console.log("LS is: ", LS)
                 return
             
             }  else if (v.tag === "lit") { // assigning aft array retrieval
                 push(LS, curr)
                 assign(x, v.val)
                 return
-            } else {
-                console.log("x is: ", x)
-                console.log("v is: ", v)
-                console.log("??????????????????????????")
-            }
+            } 
         }
         push(LS, curr)
     }
     
     // search in static memory
     if (dict_has_key(SM, x)) {
-        console.log("assigning i ", v)
         if (v.tag === "closure") {
             let type = dict_get(SM, x).type
             v.type = type
@@ -645,18 +626,13 @@ const assign = (x, v) => {
                 dict_set(SM, x, v)
                 return 
             }
-        } else {
-            console.log("??????????????????????????")
-        }
+        } 
     } else {
         error(x, 'unbound name:')
     }
 }
 
 const extend = (xs, vs) => {
-    console.log("extending params")
-    // console.log(xs)
-    // console.log(vs)
     if (vs.length > xs.length) error('too many arguments')
     if (vs.length < xs.length) error('too few arguments')
     const new_frame = {}
@@ -852,19 +828,14 @@ const microcode = {
             push(RTS, {tag: 'assmt_i', sym: cmd.sym, type: cmd.type}, cmd.expr),
     lam:
         cmd =>
-        {
             push(S, {tag: 'closure', prms: cmd.prms, body: cmd.body})
-
-        },
+        ,
     arr_acc:
         cmd =>
             push(RTS, {tag: 'arr_acc_i'}, cmd.ind, cmd.arr),
     arr_assmt:
         cmd =>
             push(RTS, {tag: 'arr_assmt_i', sym: cmd.arr.sym}, cmd.expr, cmd.ind, cmd.arr),
-    arr_len:
-        cmd =>
-            push(A, {tag: 'arr_len_i'}, cmd.expr),
     arr_lit:
         cmd =>
             push(S, {tag: cmd.tag, elems: cmd.elems}),
@@ -882,13 +853,6 @@ const microcode = {
         cmd => {
             scan(cmd.body)
             RTS.push(cmd.body)
-
-            // const unassigneds = locals.map(_ => unassigned)
-            // below is to save prev env. since it is all on local stack, not needed
-            // if (! (RTS.length === 0))
-            //     push(RTS, {tag: 'loc_frame', env: E})
-            // push(A, cmd.body)
-            // E = extend(locals, unassigneds, E)
         },
     let:
         cmd =>
@@ -925,8 +889,6 @@ const microcode = {
                 let rtn_val = S.pop()
                 let obj = dict_get(SM, "main")
 
-                console.log(SM)
-                console.log("rtn val is : ", rtn_val, obj.type)
 
                 if (obj.type != get_type(rtn_val)) {
                     error("type mismatch with main")
@@ -941,10 +903,6 @@ const microcode = {
             // return to main
             
         },
-            // RTS.pop().tag === 'mark_i'    // mark found?
-            //     ? null                    // stop loop
-            //     : push(A, cmd),           // continue loop by pushing same
-                                          // reset_i instruction back on agenda
     assmt_i:
     // peek top of stash without popping:
     // the value remains on the stash
@@ -955,18 +913,8 @@ const microcode = {
                 // run function
                 S.pop()
                 const arity = nxt.prms
-                // push(RTS, {tag: 'assmt_i', sym: cmd.sym, type: cmd.type}, {tag: 'app', fun: {}})
-                console.log(nxt)
-                console.log("SM: ", SM)
-
-                console.log("DONEEEEEE")
             } else {
-                // if ()
                 if (nxt.tag != "closure") {
-                    // console.log("cmd is ", cmd)
-                    // console.log("in assmt_i")
-                    // console.log("cmd: ", cmd)
-                    // console.log("nxt: ", nxt)
                     type_check(cmd.sym, nxt)
                 }
             }
@@ -993,34 +941,11 @@ const microcode = {
             const sf = S.pop()
             if (sf.tag === 'builtin')
                 return push(S, apply_builtin(sf.sym, args))
+            
             // remaining case: sf.tag === 'closure'
             // closure:
-            console.log("here")
-            if (RTS.length === 0 /**|| peek(RTS).tag === 'env_i' **/) {
-                // current E not needed:
-                // just push mark, and not env_i
-                // console.log("in a")
-                // console.log(cmd)
-                // error("done")
-                // push(RTS, {tag: 'mark_i'})
-            } else if (peek(RTS).tag === 'reset_i') {
-                // tail call:
-                // The callee's ret_i will push another reset_i
-                // which will go to the correct mark.
-                console.log("in b")
-                // RTS.pop()
-                // The current E is not needed, because
-                // the following reset_i is the last body
-                // instruction to be executed.
-            } else {
-                // general case:
-                // push current environment
-                console.log("in c")
-
-                // push(RTS, {tag: 'env_i', env: E}, {tag: 'mark_i'})
-            }
+            
             push(RTS, sf.body)
-            // console.log(LS)
             if (is_null(sf.prms)) {
                 sf.prms = []
             }
@@ -1037,15 +962,11 @@ const microcode = {
                     {tag: 'pop_i'},  // pop body value
                     cmd.body)
                 : null,
-    env_i:
-        cmd =>
-            E = cmd.env,
     arr_acc_i:
         cmd => {
             const ind = S.pop()
             const arr_obj = S.pop()
             const arr = arr_obj.val.elems
-            console.log(arr)
             if (ind >= arr.length || ind < 0) {
                 error("array access out of bounds")
             }
@@ -1055,11 +976,7 @@ const microcode = {
         cmd => {
             const val = S.pop()
             const ind = S.pop()
-            console.log("S: ", S)
             let arr_obj = S.pop()
-            console.log(arr_obj)
-
-            console.log("empty is: ", SM["mt"])
 
             let arr; 
             if (arr_obj.val === undefined) {
@@ -1088,25 +1005,6 @@ const microcode = {
             }
 
             push(S, val)
-        },
-    arr_len_i:
-        cmd => {
-            const arr = S.pop()
-            push(S, array_length(arr))
-        },
-    throw_i:
-        cmd => {
-            const next = A.pop()
-            if (next.tag === 'catch_i') { // catch found?
-                const catch_cmd = next  // stop loop
-                push(A, {tag: 'env_i', env: catch_cmd.env},
-                    catch_cmd.catch)
-                E = extend([catch_cmd.sym],
-                    [S.pop()],
-                    catch_cmd.env)
-            } else {          // continue loop by pushing same
-                push(A, cmd)  // throw_i instruction back on agenda
-            }
         }
 }
 
@@ -1115,33 +1013,6 @@ const microcode = {
  * ****************/
 
 const step_limit = 1000000
-
-function init_global_dec(g_dec) {
-    let sf = {}
-    let dec_arr = []
-    if (g_dec.body.tag === 'seq') {
-        let stmts = g_dec.body.stmts
-        for (var i in stmts) {
-            if (stmts[i].tag === 'let' || stmts[i].tag === 'fun') {
-                if (dict_has_key(sf, stmts[i].sym)) {
-                    error("Multi declaration of same name not allowed.")
-                }
-                dict_set(sf, stmts[i].sym, {val: "unassigned", type: stmts[i].type})
-                if (is_null(stmts[i].expr)) { // remove variable declaration
-                    dec_arr.push(i)
-                }
-            }
-        }
-        remove_declarations(g_dec.stmts, dec_arr)
-    } else if (g_dec.tag === 'let' || g_dec.tag === 'fun') {
-        dict_set(sf, g_dec.sym, {val: "unassigned", type: stmts[i].type})
-        if (is_null(stmts[i].expr)) { // remove variable declaration
-            dec_arr.push(i)
-        }
-        remove_declarations(g_dec, dec_arr)
-    }
-    return sf
-}
 
 const process_global_dec = (decs) => {
     let i = 0
@@ -1152,17 +1023,8 @@ const process_global_dec = (decs) => {
         const cmd = RTS.pop()
         if (microcode.hasOwnProperty(cmd.tag)) {
             microcode[cmd.tag](cmd)
-            //debug(cmd)
-            console.log("command is: ", cmd)
-            console.log("LS is: ", LS)
-            // display("", "RTS:")
-            // for (let cmd of RTS)
-            //     display('', command_to_string(cmd))
-            
-            console.log()
         } else {
-            error("", "unknown command: " + 
-                      command_to_string(cmd))
+            error("", "unknown command: " , cmd)
         }
         i++
     }
@@ -1186,13 +1048,6 @@ const execute = () => {
         error("main function not defined")
     }
 
-    console.log("done with global")
-    // console.log("RTS: ", RTS)
-    // console.log("stack: ", S)
-    // console.log("local stack: ", LS)
-    // console.log("static mem: ", SM)
-    // error("done with main")
-
     const starting_pt = ["application", [["name", ["main", [dict_get(SM, "main").type, null]]], [dict_get(SM, "main").prms, null]]]
 
     RTS = [ast_to_json(starting_pt)]
@@ -1202,66 +1057,17 @@ const execute = () => {
     while (i < step_limit) {
         if (RTS.length == 0) break
         const cmd = RTS.pop()
-        console.log("executing command: ", cmd)
-        // console.log("stack: ", S)
-        // console.log("local stack: ", LS)
-        
-        // console.log("new local stack: ", LS)
-
 
         if (microcode.hasOwnProperty(cmd.tag)) {
             microcode[cmd.tag](cmd)
-            //debug(cmd)
-            display("", "RTS:")
-            for (let cmd of RTS)
-                display('', command_to_string(cmd))
-            console.log()
-
         } else {
-            error("", "unknown command: " +
-                command_to_string(cmd))
+            error("", "unknown command: " , cmd)
         }
         i++
     }
 
-    console.log("parsing complete")
-    console.log("RTS: ", RTS)
-    console.log("stack: ", S)
-    console.log("local stack: ", LS)
-    console.log("static mem: ", SM)
-
     console.log("Program finished with code ", SM["main"])
 }
-
-
-
-
-
-    // A = [parse_to_json(program)]
-    // S = []
-    // E = global_environment
-    // let i = 0
-    // while (i < step_limit) {
-    //     if (A.length === 0) break
-    //     const cmd = A.pop()
-    //     if (microcode.hasOwnProperty(cmd.tag)) {
-    //         microcode[cmd.tag](cmd)
-    //         //debug(cmd)
-    //     } else {
-    //         error("", "unknown command: " + 
-    //                   command_to_string(cmd))
-    //     }
-    //     i++
-    // }
-    // if (i === step_limit) {
-    //     error("step limit " + stringify(step_limit) + " exceeded")
-    // }
-    // if (S.length > 1 || S.length < 1) {
-    //     error(S, 'internal error: stash must be singleton but is: ')
-    // }
-    // return display(S[0])
-
-
 
 /* *********
  * debugging
@@ -1277,48 +1083,3 @@ const command_to_string = cmd =>
     (cmd.tag === 'env_i')
         ? '{ tag: "env_i", env: ...}'
         : JSON.stringify(cmd)
-
-const debug = (cmd) => {
-    display(cmd.tag, "executed command:")
-    display("", "A:")
-    for (let cmd of A)
-        display('', command_to_string(cmd))
-    display("", "S:")
-    for (let val of S)
-        display('', value_to_string(val))
-    display("", "E:")
-    for_each(frame => {
-            for (const key in frame) {
-                display("", key + ": " + value_to_string(frame[key]))
-            }
-            display("",'               ')
-        },
-        all_except_last(E))
-
-}
-
-// CodeTokens = ["variable_declaration", [["name", ["i", null]], [["literal", [2, null]], null]]]
-
-
-
-
-/* *******
- * testing
- * *******/
-
-const test = (expected) => {
-    display("", `
-    
-****************
-Test case: ` + "\n")
-    const result = execute()
-    if (stringify(result) === stringify(expected)) {
-        display(result, "success:")
-    } else {
-        display(expected, "FAILURE! expected:")
-        error(result, "result:")
-    }
-}
-test(undefined)
-
-// printNestedArray(CodeTokens)
