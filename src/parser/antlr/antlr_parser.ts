@@ -732,3 +732,10 @@ fs.writeFile('../../testing/tokens/tokens_error8.json', error8, err => {
         throw err
     }
 })
+
+const custom = Parse(fs.readFileSync('./code.c', 'utf8'));
+fs.writeFile('./antlr_tokens.json', custom, err => {
+    if (err) {
+        throw err
+    }
+})

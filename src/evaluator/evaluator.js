@@ -31,7 +31,7 @@ var tokens_error6 = require('../testing/tokens/tokens_error6.json');
 var tokens_error7 = require('../testing/tokens/tokens_error7.json');
 var tokens_error8 = require('../testing/tokens/tokens_error8.json');
 
-
+var code_tokens = require('../parser/antlr/antlr_tokens.json')
 
 /* ****************************************
  * Explicit-control evaluator for C
@@ -103,7 +103,6 @@ const parameters = (rtn, xs) => {
 
 // turn tagged list syntax from parse into JSON object
 const ast_to_json = (t) => {
-    // console.log(t)
     switch (head(t)) {
         case "literal":
             return { tag: "lit", val: head(tail(t)) }
@@ -111,6 +110,8 @@ const ast_to_json = (t) => {
             let type = tail(tail(t))
             if (!is_null(type)) {
                 type = head(type)
+            } else {
+                type = get_info(head(tail(t))).type
             }
             return { tag: "nam", sym: head(tail(t)), type: type }
         }
@@ -287,7 +288,6 @@ const ast_to_json = (t) => {
                 tag: "fun",
                 sym: head(tail(head(tail(t)))),
                 type: head(tail(tail(head(tail(t))))),
-                // prms: head(tail(tail(t))),
                 prms: parameters([], head(tail(tail(t)))),
                 body: ast_to_json(tail(tail(tail(t))))
             }
@@ -385,8 +385,6 @@ const get_info = key => {
 }
 
 const type_check = (x, y) => {
-    // console.log(x)
-    // console.log(y)
     if (typeof(x) === typeof(y)) {
         // string or number
         if (typeof(x) === "number") {
@@ -409,13 +407,6 @@ const type_check = (x, y) => {
             info_y = y
         }
         
-        // console.log(get_type(info_y))
-        // console.log(info_x)
-
-        // if (info_y.elems === undefined) {
-        //     info_y = info_y.val
-        // }
-
         if (info_y.tag === "arr_lit") {
             let lst = info_y.elems
             for (var i in lst) {
@@ -427,9 +418,9 @@ const type_check = (x, y) => {
         }
         if (info_x.type === get_type(info_y)) {
             return
-        } else if (get_type(info_x === get_type(info_y))){
+        } else if (get_type(info_x) === get_type(info_y)){
             return
-        }
+        } 
     }
     error("type mismatch")
 }
@@ -591,9 +582,9 @@ const is_literal = x => {
 
 const lookup = (key) => {
     LS.reverse()
-    // search in all local and parent frames
-    for (var i in LS) {
-        let curr = LS[i]
+    // search in all local frames
+    if (LS.length > 0) {
+        let curr = LS[0]
         if (dict_has_key(curr, key)) {
             LS.reverse()
             let obj = dict_get(curr, key)
@@ -603,6 +594,7 @@ const lookup = (key) => {
             return obj
         }
     }
+    
     LS.reverse()
 
     // search in static memory
@@ -829,8 +821,6 @@ let SM
 // changes the configuration according to the meaning of
 // the command. The return value is not used.
 
-let A // dummy init
-
 const microcode = {
 //
 // expressions
@@ -901,7 +891,7 @@ const microcode = {
         cmd =>
             push(RTS,
                 {tag: 'pop_i'},
-                {tag: 'assmt', sym: cmd.sym, expr: cmd.expr}),
+                {tag: 'assmt', sym: cmd.sym, type: cmd.type, expr: cmd.expr}),
     const:
         cmd =>
             push(RTS,
@@ -927,7 +917,7 @@ const microcode = {
 //
     reset_i:
         cmd =>{
-            LS.pop()
+            let loc_frame = LS.pop()
             if (LS.length === 0) {
                 let rtn_val = S.pop()
                 let obj = dict_get(SM, "main")
@@ -945,6 +935,17 @@ const microcode = {
 
                 // clear RTS for early termination
                 RTS = []
+            } else {
+                push(LS, loc_frame)
+                let rtn_val = S.pop()
+                if (loc_frame.return_type != get_type(rtn_val)) {
+                    error("type mismatch with function")
+                }
+                if (rtn_val.val != undefined) {
+                    rtn_val = rtn_val.val
+                }
+                LS.pop()
+                push(S, rtn_val)
             }
 
             // return to main
@@ -991,12 +992,15 @@ const microcode = {
             
             // remaining case: sf.tag === 'closure'
             // closure:
-            
             push(RTS, sf.body)
             if (is_null(sf.prms)) {
                 sf.prms = []
             }
             extend(sf.prms, args)
+
+            let curr = LS.pop()
+            dict_set(curr, "return_type", sf.type)
+            push(LS, curr)
         },
     branch_i:
         cmd =>
@@ -1004,7 +1008,7 @@ const microcode = {
     while_i:
         cmd =>
             S.pop()
-                ? push(RTS, cmd,             // push while_i itself back on agenda
+                ? push(RTS, cmd,             // push while_i itself back on RTS
                     cmd.pred,
                     {tag: 'pop_i'},  // pop body value
                     cmd.body)
@@ -1023,7 +1027,6 @@ const microcode = {
                     arr = arr_obj.val.elems
                 }
             }
-            // console.log(arr)
 
             if (ind >= arr.length || ind < 0) {
                 error("array access out of bounds")
@@ -1038,12 +1041,10 @@ const microcode = {
 
             let arr; 
             if (arr_obj.val === undefined) {
-                // console.log("happened")
                 arr = arr_obj.elems
             } else {
                 arr = arr_obj.val.elems
             }
-            // console.log(arr.length)
             if (ind >= arr.length || ind < 0) {
                 error("array access out of bounds")
             }
@@ -1081,7 +1082,6 @@ const process_global_dec = (decs) => {
     while (i < step_limit) {
         if (RTS.length === 0) break
         const cmd = RTS.pop()
-        // console.log("cmd is:", cmd)
 
         if (microcode.hasOwnProperty(cmd.tag)) {
             microcode[cmd.tag](cmd)
@@ -1121,6 +1121,7 @@ const execute = (tokens) => {
         const cmd = RTS.pop()
 
         if (microcode.hasOwnProperty(cmd.tag)) {
+            // for debugging
             // console.log("command is:", cmd)
             // console.log("S is:", S)
             // display("", "RTS:")
@@ -1136,6 +1137,7 @@ const execute = (tokens) => {
     }
 
     console.log("Program finished with code", SM["main"])
+
     return SM["main"]
 }
 
@@ -1146,6 +1148,7 @@ const command_to_string = cmd =>
     (cmd.tag === 'env_i')
     ? '{ tag: "env_i", env: ...}'
     : JSON.stringify(cmd)
+
 // used for display of environments
 const all_except_last = xs =>
     is_null(tail(xs))
@@ -1156,6 +1159,8 @@ const all_except_last = xs =>
 /* *******
  * testing
  * *******/
+
+// for testing regular tests
 let counter = 1;
 
 const test = (tokens, expected) => {
@@ -1167,24 +1172,82 @@ const test = (tokens, expected) => {
         display(expected, "FAILURE! expected:")
         error(result, "result:")
     }
+    console.log()
     counter++
 }
 
-test(tokens_test1, 2)
-test(tokens_test2, 3)
-test(tokens_test3, 10)
-test(tokens_test4, 133)
-test(tokens_test5, 3)
-test(tokens_test6, 0)
-test(tokens_test7, 3)
-test(tokens_test8, 6)
-test(tokens_test9, 4)
-test(tokens_test10, 0)
-test(tokens_test11, 4)
-test(tokens_test12, 0)
-test(tokens_test13, 10)
-test(tokens_test14, 2)
-test(tokens_test15, 0)
-test(tokens_test16, 720)
-test(tokens_test17, 0)
+/* *******
+ * test suite
+ * 
+ * uncomment to run
+ * *******/
+// test(tokens_test1, 2)
+// test(tokens_test2, 3)
+// test(tokens_test3, 10)
+// test(tokens_test4, 133)
+// test(tokens_test5, 3)
+// test(tokens_test6, 0)
+// test(tokens_test7, 3)
+// test(tokens_test8, 6)
+// test(tokens_test9, 4)
+// test(tokens_test10, 0)
+// test(tokens_test11, 4)
+// test(tokens_test12, 0)
+// test(tokens_test13, 10)
+// test(tokens_test14, 2)
+// test(tokens_test15, 0)
+// test(tokens_test16, 720)
+// test(tokens_test17, 0)
 
+let err_counter = 1
+const test_error = (tokens, error_msg) => {
+    console.log("Testing tokes from:", "tokens_error", err_counter)
+    try {
+        execute(tokens)
+    } catch (e) {
+        if (stringify(e) === error_msg) {
+            display(e, "success:")
+        } else {
+            display(e, "FAILURE! expected:")
+            error(e, "result:")
+        }
+    }
+    console.log()
+    err_counter++
+
+}
+
+/* *******
+ * error test suite
+ * 
+ * uncomment to run
+ * *******/
+// test_error(tokens_error1, "Error: \"type mismatch with function\"")
+// test_error(tokens_error2, "Error: \"type mismatch with function\"")
+// test_error(tokens_error3, "Error: \"type mismatch for parameters!\"")
+// test_error(tokens_error4, "Error: \"array access out of bounds\"")
+// test_error(tokens_error5, "Error: \"type mismatch\"")
+// test_error(tokens_error6, "Error: \"array obj declared is of different type\"" )
+// test_error(tokens_error7, "Error: \"array does not match declared size\"")
+// test_error(tokens_error8, "Error: \"main function not defined\"") // shows early termination of antlr due to syntactical errors
+
+
+const test_custom = (tokens, expected) => {
+    console.log("Testing tokes from:", "code.c")
+    const result = execute(tokens)
+    if (stringify(result) === stringify(expected)) {
+        display(result, "success:")
+    } else {
+        display(expected, "FAILURE! expected:")
+        error(result, "result:")
+    }
+    console.log()
+    counter++
+}
+
+/* *******
+ * custom testing
+ * 
+ * uncomment to run
+ * *******/
+test_custom(code_tokens, /*insert value here*/ 720)

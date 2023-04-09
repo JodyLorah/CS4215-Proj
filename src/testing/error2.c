@@ -4,7 +4,7 @@ int y = 3+2;
 
 int main(){
     int c = f(1,2,3);
-    int fun = f1();
+    double fun = f1();
     return 2;
 }
 
