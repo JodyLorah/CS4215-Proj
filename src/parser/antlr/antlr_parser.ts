@@ -550,192 +550,193 @@ function parseInput(input: string): CompilationUnitContext {
     return parser.compilationUnit();
 }
 
-function Parse(input: string) {
+export function Parse(input: string) {
     const tree = parseInput(input);
     const instructions = tree.accept(new Visitor());
     return JSON.stringify(instructions, null, 0)
 }
 
-// mass generate test tokens
+// mass generate test tokens from test suite
+// uncomment to use
 
-const test1 = Parse(fs.readFileSync('../../testing/test1.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test1.json', test1, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test1 = Parse(fs.readFileSync('../../testing/test1.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test1.json', test1, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const test2 = Parse(fs.readFileSync('../../testing/test2.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test2.json', test2, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test2 = Parse(fs.readFileSync('../../testing/test2.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test2.json', test2, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const test3 = Parse(fs.readFileSync('../../testing/test3.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test3.json', test3, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test3 = Parse(fs.readFileSync('../../testing/test3.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test3.json', test3, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const test4 = Parse(fs.readFileSync('../../testing/test4.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test4.json', test4, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test4 = Parse(fs.readFileSync('../../testing/test4.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test4.json', test4, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const test5 = Parse(fs.readFileSync('../../testing/test5.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test5.json', test5, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test5 = Parse(fs.readFileSync('../../testing/test5.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test5.json', test5, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const test6 = Parse(fs.readFileSync('../../testing/test6.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test6.json', test6, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test6 = Parse(fs.readFileSync('../../testing/test6.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test6.json', test6, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const test7 = Parse(fs.readFileSync('../../testing/test7.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test7.json', test7, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test7 = Parse(fs.readFileSync('../../testing/test7.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test7.json', test7, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const test8 = Parse(fs.readFileSync('../../testing/test8.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test8.json', test8, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test8 = Parse(fs.readFileSync('../../testing/test8.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test8.json', test8, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const test9 = Parse(fs.readFileSync('../../testing/test9.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test9.json', test9, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test9 = Parse(fs.readFileSync('../../testing/test9.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test9.json', test9, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const test10 = Parse(fs.readFileSync('../../testing/test10.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test10.json', test10, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test10 = Parse(fs.readFileSync('../../testing/test10.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test10.json', test10, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const test11 = Parse(fs.readFileSync('../../testing/test11.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test11.json', test11, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test11 = Parse(fs.readFileSync('../../testing/test11.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test11.json', test11, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const test12 = Parse(fs.readFileSync('../../testing/test12.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test12.json', test12, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test12 = Parse(fs.readFileSync('../../testing/test12.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test12.json', test12, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const test13 = Parse(fs.readFileSync('../../testing/test13.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test13.json', test13, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test13 = Parse(fs.readFileSync('../../testing/test13.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test13.json', test13, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const test14 = Parse(fs.readFileSync('../../testing/test14.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test14.json', test14, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test14 = Parse(fs.readFileSync('../../testing/test14.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test14.json', test14, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const test15 = Parse(fs.readFileSync('../../testing/test15.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test15.json', test15, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test15 = Parse(fs.readFileSync('../../testing/test15.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test15.json', test15, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const test16 = Parse(fs.readFileSync('../../testing/test16.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test16.json', test16, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test16 = Parse(fs.readFileSync('../../testing/test16.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test16.json', test16, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const test17 = Parse(fs.readFileSync('../../testing/test17.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_test17.json', test17, err => {
-    if (err) {
-        throw err
-    }
-})
+// const test17 = Parse(fs.readFileSync('../../testing/test17.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_test17.json', test17, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const error1 = Parse(fs.readFileSync('../../testing/error1.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_error1.json', error1, err => {
-    if (err) {
-        throw err
-    }
-})
+// const error1 = Parse(fs.readFileSync('../../testing/error1.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_error1.json', error1, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const error2 = Parse(fs.readFileSync('../../testing/error2.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_error2.json', error2, err => {
-    if (err) {
-        throw err
-    }
-})
+// const error2 = Parse(fs.readFileSync('../../testing/error2.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_error2.json', error2, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const error3 = Parse(fs.readFileSync('../../testing/error3.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_error3.json', error3, err => {
-    if (err) {
-        throw err
-    }
-})
+// const error3 = Parse(fs.readFileSync('../../testing/error3.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_error3.json', error3, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const error4 = Parse(fs.readFileSync('../../testing/error4.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_error4.json', error4, err => {
-    if (err) {
-        throw err
-    }
-})
+// const error4 = Parse(fs.readFileSync('../../testing/error4.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_error4.json', error4, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const error5 = Parse(fs.readFileSync('../../testing/error5.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_error5.json', error5, err => {
-    if (err) {
-        throw err
-    }
-})
+// const error5 = Parse(fs.readFileSync('../../testing/error5.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_error5.json', error5, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const error6 = Parse(fs.readFileSync('../../testing/error6.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_error6.json', error6, err => {
-    if (err) {
-        throw err
-    }
-})
+// const error6 = Parse(fs.readFileSync('../../testing/error6.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_error6.json', error6, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const error7 = Parse(fs.readFileSync('../../testing/error7.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_error7.json', error7, err => {
-    if (err) {
-        throw err
-    }
-})
+// const error7 = Parse(fs.readFileSync('../../testing/error7.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_error7.json', error7, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const error8 = Parse(fs.readFileSync('../../testing/error8.c', 'utf8'));
-fs.writeFile('../../testing/tokens/tokens_error8.json', error8, err => {
-    if (err) {
-        throw err
-    }
-})
+// const error8 = Parse(fs.readFileSync('../../testing/error8.c', 'utf8'));
+// fs.writeFile('../../testing/tokens/tokens_error8.json', error8, err => {
+//     if (err) {
+//         throw err
+//     }
+// })
 
-const custom = Parse(fs.readFileSync('./code.c', 'utf8'));
-fs.writeFile('./antlr_tokens.json', custom, err => {
-    if (err) {
-        throw err
-    }
-})
+// const custom = Parse(fs.readFileSync('./code.c', 'utf8'));
+// fs.writeFile('./antlr_tokens.json', custom, err => {
+//     if (err) {
+//         throw err
+//     }
+// })

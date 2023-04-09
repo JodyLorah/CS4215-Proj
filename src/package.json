@@ -1,6 +1,8 @@
 {
     "scripts": {
-        "parser": "cd parser/antlr && node antlr_parser.js"
+        "parser": "cd parser/antlr && node antlr_parser.js",
+        "eval": "cd evaluator && node evaluator.js",
+        "all": "cd parser/antlr && node antlr_parser.js && cd .. && cd .. && cd evaluator && node evaluator.js"
     },
     "dependencies": {
         "antlr4": "^4.12.0",
