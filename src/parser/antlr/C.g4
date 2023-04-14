@@ -39,10 +39,6 @@
 
     postfixExpression
         : primaryExpression ('(' argumentExpressionList? ')' | '[' assignmentExpression ']')? 
-        //('[' assignmentExpression ']' /* TO REVIEW */
-        //| '(' argumentExpressionList? ')'/* TO REVIEW */
-        //| ('++' | '--') /* TO REVIEW */
-        //)*
         ;
 
     argumentExpressionList
@@ -50,11 +46,8 @@
         ;
 
     unaryExpression
-        :
-        //('++' |  '--' )* /* TO REVIEW */
-        (postfixExpression
+        :   postfixExpression
         |   unaryOperator castExpression
-        )
         ;
 
     unaryOperator
@@ -63,7 +56,6 @@
 
     castExpression
         :   unaryExpression
-        //|   DigitSequence // for /* TO REVIEW */
         ;
 
     multiplicativeExpression
@@ -93,20 +85,6 @@
         |   equalityExpression '!=' relationalExpression
         ;
 
-    /**
-    andExpression
-        :   equalityExpression ( '&' equalityExpression)*
-        ;
-
-    exclusiveOrExpression
-        :   andExpression ('^' andExpression)*
-        ;
-
-    inclusiveOrExpression
-        :   exclusiveOrExpression ('|' exclusiveOrExpression)*
-        ;
-    **/
-
     logicalAndExpression
         :   equalityExpression 
         |   logicalAndExpression '&&' equalityExpression
@@ -117,7 +95,7 @@
         |   logicalOrExpression '||' logicalAndExpression
         ;
 
-    conditionalExpression
+    conditionalExpression   
         :   logicalOrExpression
         ;
 
@@ -127,7 +105,7 @@
         ;
 
     assignmentOperator
-        :   '=' // | '*=' | '/=' | '%=' | '+=' | '-='  // TO REVIEW
+        :   '=' 
         ;
 
     constantExpression
@@ -143,10 +121,9 @@
         ;
 
     typeSpecifier
-        :   ('char'
+        :   'char'
         |   'int'
         |   'double'
-        )
         ;
 
 
@@ -258,7 +235,7 @@
         ;
 
     functionDefinition
-        :   typeSpecifier directDeclarator /*declarationList?*/ compoundStatement
+        :   typeSpecifier directDeclarator compoundStatement
         ;
 
     declarationList

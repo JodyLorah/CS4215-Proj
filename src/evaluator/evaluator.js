@@ -1110,7 +1110,11 @@ const execute = (tokens) => {
         error("main function not defined")
     }
 
-    const starting_pt = ["application", [["name", ["main", [dict_get(SM, "main").type, null]]], [dict_get(SM, "main").prms, null]]]
+    const starting_pt = ["application", 
+                            [["name", ["main", [dict_get(SM, "main").type, null]]], 
+                             [dict_get(SM, "main").prms, null]
+                            ]
+                        ]
 
     RTS = [ast_to_json(starting_pt)]
 
@@ -1134,6 +1138,9 @@ const execute = (tokens) => {
             error("", "unknown command: " , cmd)
         }
         i++
+    }
+    if (i === step_limit) {
+        error("step limit " + stringify(step_limit) + " exceeded")
     }
 
     console.log("Program finished with code", SM["main"])
@@ -1242,7 +1249,6 @@ const test_custom = (tokens, expected) => {
         error(result, "result:")
     }
     console.log()
-    counter++
 }
 
 /* *******
@@ -1250,4 +1256,6 @@ const test_custom = (tokens, expected) => {
  * 
  * uncomment to run
  * *******/
-test_custom(code_tokens, /*insert value here*/ 720)
+test_custom(code_tokens, /*insert value here*/ 55)
+
+module.exports = {execute}
