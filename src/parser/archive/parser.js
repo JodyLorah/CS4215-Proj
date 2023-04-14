@@ -1,4 +1,4 @@
-import CParser, {CompilationUnitContext} from "./antlr/antlr_parser.js";
+import CParser, {CompilationUnitContext} from "../antlr/antlr_parser.js";
 
 
 
