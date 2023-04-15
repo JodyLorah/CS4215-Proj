@@ -1153,23 +1153,23 @@ const test = (tokens, expected) => {
  * 
  * uncomment to run
  * *******/
-test(tokens_test1, 2)
-test(tokens_test2, 3)
-test(tokens_test3, 10)
-test(tokens_test4, 133)
-test(tokens_test5, 3)
-test(tokens_test6, 0)
-test(tokens_test7, 3)
-test(tokens_test8, 6)
-test(tokens_test9, 4)
-test(tokens_test10, 0)
-test(tokens_test11, 4)
-test(tokens_test12, 0)
-test(tokens_test13, 10)
-test(tokens_test14, 2)
-test(tokens_test15, 0)
-test(tokens_test16, 720)
-test(tokens_test17, 0)
+// test(tokens_test1, 2)
+// test(tokens_test2, 3)
+// test(tokens_test3, 10)
+// test(tokens_test4, 133)
+// test(tokens_test5, 3)
+// test(tokens_test6, 0)
+// test(tokens_test7, 3)
+// test(tokens_test8, 6)
+// test(tokens_test9, 4)
+// test(tokens_test10, 0)
+// test(tokens_test11, 4)
+// test(tokens_test12, 0)
+// test(tokens_test13, 10)
+// test(tokens_test14, 2)
+// test(tokens_test15, 0)
+// test(tokens_test16, 720)
+// test(tokens_test17, 0)
 
 let err_counter = 1
 const test_error = (tokens, error_msg) => {
@@ -1194,14 +1194,14 @@ const test_error = (tokens, error_msg) => {
  * 
  * uncomment to run
  * *******/
-test_error(tokens_error1, "Error: \"type mismatch with function\"")
-test_error(tokens_error2, "Error: \"type mismatch with function\"")
-test_error(tokens_error3, "Error: \"type mismatch for parameters!\"")
-test_error(tokens_error4, "Error: \"array access out of bounds\"")
-test_error(tokens_error5, "Error: \"type mismatch\"")
-test_error(tokens_error6, "Error: \"array obj declared is of different type\"" )
-test_error(tokens_error7, "Error: \"array does not match declared size\"")
-test_error(tokens_error8, "Error: \"main function not defined\"") // shows early termination of antlr due to syntactical errors
+// test_error(tokens_error1, "Error: \"type mismatch with function\"")
+// test_error(tokens_error2, "Error: \"type mismatch with function\"")
+// test_error(tokens_error3, "Error: \"type mismatch for parameters!\"")
+// test_error(tokens_error4, "Error: \"array access out of bounds\"")
+// test_error(tokens_error5, "Error: \"type mismatch\"")
+// test_error(tokens_error6, "Error: \"array obj declared is of different type\"" )
+// test_error(tokens_error7, "Error: \"array does not match declared size\"")
+// test_error(tokens_error8, "Error: \"main function not defined\"") // shows early termination of antlr due to syntactical errors
 
 
 const test_custom = (tokens, expected) => {
