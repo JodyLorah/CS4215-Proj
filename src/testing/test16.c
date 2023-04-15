@@ -1,4 +1,4 @@
-// testing tail calls
+// testing return function calls
 
 int factorial(int n)  {  
     if (n == 0)  {

@@ -497,8 +497,6 @@ export default class CParser extends Parser {
 		let localctx: UnaryExpressionContext = new UnaryExpressionContext(this, this._ctx, this.state);
 		this.enterRule(localctx, 6, CParser.RULE_unaryExpression);
 		try {
-			this.enterOuterAlt(localctx, 1);
-			{
 			this.state = 125;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
@@ -506,6 +504,7 @@ export default class CParser extends Parser {
 			case 86:
 			case 87:
 			case 89:
+				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 121;
 				this.postfixExpression();
@@ -513,6 +512,7 @@ export default class CParser extends Parser {
 				break;
 			case 56:
 			case 66:
+				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 122;
 				this.unaryOperator();
@@ -522,7 +522,6 @@ export default class CParser extends Parser {
 				break;
 			default:
 				throw new NoViableAltException(this);
-			}
 			}
 		}
 		catch (re) {

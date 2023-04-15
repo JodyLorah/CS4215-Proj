@@ -59,26 +59,13 @@ const dict_set = (d, key, input) => {
  * parse to JSON
  * *************/
 
-function printNestedArray(arr) {
-    process.stdout.write("[");
-    arr.forEach((el, index) => {
-        if (Array.isArray(el)) {
-            printNestedArray(el);
-        } else {
-            process.stdout.write(JSON.stringify(el));
-        }
-        if (index !== arr.length - 1) {
-            process.stdout.write(", ");
-        }
-    });
-    process.stdout.write("]");
-}
-
 const list_to_array = xs =>
     is_null(xs)
         ? []
         : [head(xs)].concat(list_to_array(tail(xs)))
 
+// makes an object for a given parameter 
+// int x would return object {sym: x, type: 'int'}
 const make_param_obj = xs => {
     if (head(xs) != 'name') {
         return ast_to_json(xs)
@@ -101,7 +88,7 @@ const parameters = (rtn, xs) => {
     return parameters(rtn, tail(xs))
 }
 
-// turn tagged list syntax from parse into JSON object
+// turn tagged list syntax from tokens generated into JSON object
 const ast_to_json = (t) => {
     switch (head(t)) {
         case "literal":
@@ -320,43 +307,24 @@ const parse_to_json = tokens =>
         body: ast_to_json(tokens)});
 
 
-/* *************************
- * values of the interpreter
- * *************************/
-
-// for numbers, strings, booleans, undefined, null
-// we use the value directly
-
-// closures aka function values
-const is_closure = x =>
-    x !== null &&
-    typeof x === "object" &&
-    x.tag === 'closure'
-
-const is_builtin = x =>
-    x !== null &&
-    typeof x === "object" &&
-    x.tag == 'builtin'
-
-// catching closure and builtins to get short displays
-const value_to_string = x =>
-    is_closure(x)
-        ? '<closure>'
-        : is_builtin(x)
-            ? '<builtin: ' + x.sym + '>'
-            : stringify(x)
-
 /* **********************
  * operators and builtins
  * **********************/
+
+// checks if a given input n is an integer
+// if yes return true else return false
 function is_int(n){
     return Number(n) === n && n % 1 === 0;
 }
 
+// checks if a given input n is a double
+// if yes return true else return false
 function is_double(n){
     return Number(n) === n && n % 1 !== 0;
 }
 
+// given a string or object, 
+// the function returns the type of the string
 const get_type = (x) => {
     return x.tag === "lit"  
             ? get_type(x.val)
@@ -371,6 +339,8 @@ const get_type = (x) => {
             : "undefined"
 }
 
+// given a key, returns the value stored
+// in the LS or SM
 const get_info = key => {
     let curr = peek(LS)
     if (dict_has_key(curr, key)) {
@@ -384,6 +354,10 @@ const get_info = key => {
     return null;
 }
 
+
+// checks the type of x and y
+// if both have the same type, return true
+// else throws a type mismatch error
 const type_check = (x, y) => {
     if (typeof(x) === typeof(y)) {
         // string or number
@@ -546,40 +520,16 @@ const builtin_mapping = {
 const apply_builtin = (builtin_symbol, args) =>
     builtin_mapping[builtin_symbol](...args)
 
-/* ************
- * environments
- * ************/
-
-// Frames are objects that map symbols (strings) to values.
-
-const global_frame = {}
-
-// fill global frame with built-in objects
-for (const key in builtin_mapping)
-    global_frame[key] = { tag:   'builtin',
-        sym:   key,
-        arity: arity(builtin_mapping[key])
-    }
-// fill global frame with built-in constants
-global_frame.undefined    = undefined
-global_frame.math_E       = math_E
-global_frame.math_LN10    = math_LN10
-global_frame.math_LN2     = math_LN2
-global_frame.math_LOG10E  = math_LOG10E
-global_frame.math_LOG2E   = math_LOG2E
-global_frame.math_PI      = math_PI
-global_frame.math_SQRT1_2 = math_SQRT1_2
-global_frame.math_SQRT2   = math_SQRT2
-
-// An environment is null or a pair whose head is a frame 
-// and whose tail is an environment.
-const empty_environment = null
-const global_environment = pair(global_frame, empty_environment)
-
+// checks if a given object is a literal
+// returns true if the object has type int, double or char
+// returns false otherwise
 const is_literal = x => {
     return (x.type === "int" || x.type === "double" || x.type === "char") ? true : false
 }
 
+// retrieves the value stored using a given key
+// throws an unbound name error if the key cannot 
+// be found in the top frame of the LS or SM
 const lookup = (key) => {
     LS.reverse()
     // search in all local frames
@@ -605,6 +555,9 @@ const lookup = (key) => {
     }
 }
 
+// assigns a new value v to a given key x
+// if x cannot be found in the top frame of
+// LS or in the SM, throws an unbound name error
 const assign = (x, v) => {
     if (LS.length > 0) {
         let curr = LS.pop()
@@ -667,6 +620,8 @@ const assign = (x, v) => {
     }
 }
 
+// initialises a new frame with the parameter names and
+// input values. This is used for new function calls.
 const extend = (xs, vs) => {
     if (vs.length > xs.length) error('too many arguments')
     if (vs.length < xs.length) error('too few arguments')
@@ -679,17 +634,6 @@ const extend = (xs, vs) => {
         dict_set(new_frame, xs[i].sym, obj)
     }
     push(LS, new_frame)
-}
-
-// At the start of executing a block, local 
-// variables refer to unassigned values.
-const unassigned = { tag: 'unassigned' }
-
-const is_unassigned = v => {
-    return v !== null &&
-        typeof v === "object" &&
-        v.hasOwnProperty('tag') &&
-        v.tag === 'unassigned'
 }
 
 /* ******************
@@ -777,9 +721,11 @@ const peek = array =>
  * **************************/
 
 // An interpreter configuration has three parts:
-// A: agenda: stack of commands
+// LS: Local Stack: list of local stack frames containing local variables declared
 // S: stash: stack of values
-// E: environment: list of frames
+// RTS: Runtime Stack: list of instructions to be executed
+// SM: Static Memory: hashmap containing all global declarations including 
+//                    variables and functions declared
 
 // local stack LS
 // stores all local variables of the current function run
@@ -1075,6 +1021,8 @@ const microcode = {
 
 const step_limit = 1000000
 
+// first round of processing and storing global declarations
+// used to generate SM (initially stored in LS, later transferred)
 const process_global_dec = (decs) => {
     let i = 0
     RTS = [decs]
@@ -1096,6 +1044,7 @@ const process_global_dec = (decs) => {
     return LS[0]
 }
 
+// driver function to start processing tokens
 const execute = (tokens) => {
     SM = {}
     S = []
@@ -1110,6 +1059,8 @@ const execute = (tokens) => {
         error("main function not defined")
     }
 
+    // injecting main function body into RTS since all C code
+    // starts running from the main function body
     const starting_pt = ["application", 
                             [["name", ["main", [dict_get(SM, "main").type, null]]], 
                              [dict_get(SM, "main").prms, null]
@@ -1118,7 +1069,6 @@ const execute = (tokens) => {
 
     RTS = [ast_to_json(starting_pt)]
 
-    
     let i = 0
     while (i < step_limit) {
         if (RTS.length == 0) break
@@ -1162,6 +1112,21 @@ const all_except_last = xs =>
         ? null
         : pair(head(xs), all_except_last(tail(xs)))
 
+function printNestedArray(arr) {
+    process.stdout.write("[");
+    arr.forEach((el, index) => {
+        if (Array.isArray(el)) {
+            printNestedArray(el);
+        } else {
+            process.stdout.write(JSON.stringify(el));
+        }
+        if (index !== arr.length - 1) {
+            process.stdout.write(", ");
+        }
+    });
+    process.stdout.write("]");
+}
+
 
 /* *******
  * testing
@@ -1188,23 +1153,23 @@ const test = (tokens, expected) => {
  * 
  * uncomment to run
  * *******/
-// test(tokens_test1, 2)
-// test(tokens_test2, 3)
-// test(tokens_test3, 10)
-// test(tokens_test4, 133)
-// test(tokens_test5, 3)
-// test(tokens_test6, 0)
-// test(tokens_test7, 3)
-// test(tokens_test8, 6)
-// test(tokens_test9, 4)
-// test(tokens_test10, 0)
-// test(tokens_test11, 4)
-// test(tokens_test12, 0)
-// test(tokens_test13, 10)
-// test(tokens_test14, 2)
-// test(tokens_test15, 0)
-// test(tokens_test16, 720)
-// test(tokens_test17, 0)
+test(tokens_test1, 2)
+test(tokens_test2, 3)
+test(tokens_test3, 10)
+test(tokens_test4, 133)
+test(tokens_test5, 3)
+test(tokens_test6, 0)
+test(tokens_test7, 3)
+test(tokens_test8, 6)
+test(tokens_test9, 4)
+test(tokens_test10, 0)
+test(tokens_test11, 4)
+test(tokens_test12, 0)
+test(tokens_test13, 10)
+test(tokens_test14, 2)
+test(tokens_test15, 0)
+test(tokens_test16, 720)
+test(tokens_test17, 0)
 
 let err_counter = 1
 const test_error = (tokens, error_msg) => {
@@ -1229,14 +1194,14 @@ const test_error = (tokens, error_msg) => {
  * 
  * uncomment to run
  * *******/
-// test_error(tokens_error1, "Error: \"type mismatch with function\"")
-// test_error(tokens_error2, "Error: \"type mismatch with function\"")
-// test_error(tokens_error3, "Error: \"type mismatch for parameters!\"")
-// test_error(tokens_error4, "Error: \"array access out of bounds\"")
-// test_error(tokens_error5, "Error: \"type mismatch\"")
-// test_error(tokens_error6, "Error: \"array obj declared is of different type\"" )
-// test_error(tokens_error7, "Error: \"array does not match declared size\"")
-// test_error(tokens_error8, "Error: \"main function not defined\"") // shows early termination of antlr due to syntactical errors
+test_error(tokens_error1, "Error: \"type mismatch with function\"")
+test_error(tokens_error2, "Error: \"type mismatch with function\"")
+test_error(tokens_error3, "Error: \"type mismatch for parameters!\"")
+test_error(tokens_error4, "Error: \"array access out of bounds\"")
+test_error(tokens_error5, "Error: \"type mismatch\"")
+test_error(tokens_error6, "Error: \"array obj declared is of different type\"" )
+test_error(tokens_error7, "Error: \"array does not match declared size\"")
+test_error(tokens_error8, "Error: \"main function not defined\"") // shows early termination of antlr due to syntactical errors
 
 
 const test_custom = (tokens, expected) => {
@@ -1257,5 +1222,3 @@ const test_custom = (tokens, expected) => {
  * uncomment to run
  * *******/
 test_custom(code_tokens, /*insert value here*/ 55)
-
-module.exports = {execute}
